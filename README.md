@@ -4,6 +4,8 @@
 
 _KRATOS Multiphysics_ ("Kratos") is a framework for building parallel, multi-disciplinary simulation software, aiming at modularity, extensibility, and high performance. Kratos is written in C++, and counts with an extensive Python interface. More in [Overview](https://github.com/KratosMultiphysics/Kratos/wiki/Overview)
 
+This version of Kratos is intended for the use in the WINSENT project. No major changes are done! All useful changes are / will be ported to the main repo sooner or later.
+
 **Kratos** is **free** under BSD-4 [license](https://github.com/KratosMultiphysics/Kratos/wiki/Licence) and can be used even in comercial softwares as it is. Many of its main applications are also free and BSD-4 licensed but each derived application can have its own propietary license.
 
 [release-image]: https://img.shields.io/badge/release-7.0-green.svg?style=flat
