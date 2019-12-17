@@ -655,24 +655,24 @@ class ResidualBasedNewtonRaphsonStrategy
                 //setting up the list of the DOFs to be solved
                 BuiltinTimer setup_dofs_time;
                 p_builder_and_solver->SetUpDofSet(p_scheme, r_model_part);
-                KRATOS_INFO_IF("Setup Dofs Time", BaseType::GetEchoLevel() > 0)
+                KRATOS_INFO_IF("NewtonRaphsonStrategy", BaseType::GetEchoLevel() > 0) << "Setup Dofs Time: "
                     << setup_dofs_time.ElapsedSeconds() << std::endl;
 
                 //shaping correctly the system
                 BuiltinTimer setup_system_time;
                 p_builder_and_solver->SetUpSystem(r_model_part);
-                KRATOS_INFO_IF("Setup System Time", BaseType::GetEchoLevel() > 0)
+                KRATOS_INFO_IF("NewtonRaphsonStrategy", BaseType::GetEchoLevel() > 0) << "Setup System Time: "
                     << setup_system_time.ElapsedSeconds() << std::endl;
 
                 //setting up the Vectors involved to the correct size
                 BuiltinTimer system_matrix_resize_time;
                 p_builder_and_solver->ResizeAndInitializeVectors(p_scheme, mpA, mpDx, mpb,
                                                                  r_model_part);
-                KRATOS_INFO_IF("System Matrix Resize Time", BaseType::GetEchoLevel() > 0)
+                KRATOS_INFO_IF("NewtonRaphsonStrategy", BaseType::GetEchoLevel() > 0) << "System Matrix Resize Time: "
                     << system_matrix_resize_time.ElapsedSeconds() << std::endl;
             }
 
-            KRATOS_INFO_IF("System Construction Time", BaseType::GetEchoLevel() > 0)
+            KRATOS_INFO_IF("NewtonRaphsonStrategy", BaseType::GetEchoLevel() > 0) << "System Construction Time: "
                 << system_construction_time.ElapsedSeconds() << std::endl;
 
             TSystemMatrixType& rA  = *mpA;
@@ -759,6 +759,7 @@ class ResidualBasedNewtonRaphsonStrategy
         TSystemVectorType& rb  = *mpb;
 
         //initializing the parameters of the Newton-Raphson cycle
+        BuiltinTimer iteration_time;
         unsigned int iteration_number = 1;
         r_model_part.GetProcessInfo()[NL_ITERATION_NUMBER] = iteration_number;
         bool is_converged = false;
@@ -800,10 +801,14 @@ class ResidualBasedNewtonRaphsonStrategy
             is_converged = mpConvergenceCriteria->PostCriteria(r_model_part, r_dof_set, rA, rDx, rb);
         }
 
+        KRATOS_INFO_IF("NewtonRaphsonStrategy", BaseType::GetEchoLevel() > 0) << "Time needed for iteration " << iteration_number << ": " << iteration_time.ElapsedSeconds() << std::endl;
+
         //Iteration Cycle... performed only for NonLinearProblems
         while (is_converged == false &&
                iteration_number++ < mMaxIterationNumber)
         {
+            BuiltinTimer iteration_time;
+
             //setting the number of iteration
             r_model_part.GetProcessInfo()[NL_ITERATION_NUMBER] = iteration_number;
 
@@ -871,13 +876,15 @@ class ResidualBasedNewtonRaphsonStrategy
 
                 is_converged = mpConvergenceCriteria->PostCriteria(r_model_part, r_dof_set, rA, rDx, rb);
             }
+
+            KRATOS_INFO_IF("NewtonRaphsonStrategy", BaseType::GetEchoLevel() > 0) << "Time needed for iteration " << iteration_number << ": " << iteration_time.ElapsedSeconds() << std::endl;
         }
 
         //plots a warning if the maximum number of iterations is exceeded
         if (iteration_number >= mMaxIterationNumber) {
             MaxIterationsExceeded();
         } else {
-            KRATOS_INFO_IF("NR-Strategy", this->GetEchoLevel() > 0)
+            KRATOS_INFO_IF("NewtonRaphsonStrategy", this->GetEchoLevel() > 0)
                 << "Convergence achieved after " << iteration_number << " / "
                 << mMaxIterationNumber << " iterations" << std::endl;
         }
@@ -1159,7 +1166,7 @@ class ResidualBasedNewtonRaphsonStrategy
 
     virtual void MaxIterationsExceeded()
     {
-        KRATOS_INFO_IF("NR-Strategy", this->GetEchoLevel() > 0)
+        KRATOS_INFO_IF("NewtonRaphsonStrategy", this->GetEchoLevel() > 0)
             << "ATTENTION: max iterations ( " << mMaxIterationNumber
             << " ) exceeded!" << std::endl;
     }
