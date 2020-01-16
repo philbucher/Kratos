@@ -32,6 +32,8 @@
 
 /* Adding beam element */
 #include "custom_elements/cr_beam_element_3D2N.hpp"
+#include "custom_elements/beam_element_3D2N.hpp"
+#include "custom_elements/beam_element_linear_3D2N.hpp"
 #include "custom_elements/cr_beam_element_linear_3D2N.hpp"
 #include "custom_elements/cr_beam_element_2D2N.hpp"
 #include "custom_elements/cr_beam_element_linear_2D2N.hpp"
@@ -48,6 +50,7 @@
 /* Adding shells and membranes elements */
 #include "custom_elements/isotropic_shell_element.hpp"
 #include "custom_elements/prestress_membrane_element.hpp"
+#include "custom_elements/membrane_element.hpp"
 #include "custom_elements/shell_thick_element_3D4N.hpp"
 #include "custom_elements/shell_thin_element_3D4N.hpp"
 #include "custom_elements/shell_thin_element_3D3N.hpp"
@@ -338,6 +341,8 @@ private:
     const CrBeamElementLinear3D2N mCrLinearBeamElement3D2N;
     const CrBeamElement2D2N mCrBeamElement2D2N;
     const CrBeamElementLinear2D2N mCrLinearBeamElement2D2N;
+    const BeamElement3D2N mBeamElement3D2N;
+    const BeamElementLinear3D2N mLinearBeamElement3D2N;
 
 
     // Adding the shells elements
@@ -352,6 +357,8 @@ private:
     // Adding the membrane element
     const PrestressMembraneElement mPreStressMembraneElement3D3N;
     const PrestressMembraneElement mPreStressMembraneElement3D4N;
+    const MembraneElement mMembraneElement3D4N;
+    const MembraneElement mMembraneElement3D3N;
 
     // Adding the SPRISM element
     const SolidShellElementSprism3D6N mSolidShellElementSprism3D6N;
