@@ -120,20 +120,42 @@ public:
     {
         KRATOS_TRY;
 
-        // We loop over all nodes and compute the part of the sensitivity which is in direction to the surface normal
+        ProjectNodalVariableOnDirection(rNodalVariable, NORMALIZED_SURFACE_NORMAL);
+
+        KRATOS_CATCH("");
+    }
+
+    void ProjectNodalVariableOnDirection( const Variable<array_3d> &rNodalVariable, const Variable<array_3d> &rDirectionVariable)
+    {
+        KRATOS_TRY;
+
         for (ModelPart::NodeIterator node_i = mrModelPart.NodesBegin(); node_i != mrModelPart.NodesEnd(); ++node_i)
         {
             array_3d &nodal_variable = node_i->FastGetSolutionStepValue(rNodalVariable);
-            array_3d &node_normal = node_i->FastGetSolutionStepValue(NORMALIZED_SURFACE_NORMAL);
+            array_3d &node_normal = node_i->FastGetSolutionStepValue(rDirectionVariable);
 
-            // We compute dFdX_n = (dFdX \cdot n) * n
-            double surface_sens = inner_prod(nodal_variable,node_normal);
-            nodal_variable = surface_sens * node_normal;
+            const double magnitude = inner_prod(nodal_variable, node_normal);
+            noalias(nodal_variable) = magnitude * node_normal;
         }
 
         KRATOS_CATCH("");
     }
 
+    void ProjectNodalVariableOnTangentPlane( const Variable<array_3d> &rNodalVariable, const Variable<array_3d> &rPlaneNormalVariable)
+    {
+        KRATOS_TRY;
+
+        for (ModelPart::NodeIterator node_i = mrModelPart.NodesBegin(); node_i != mrModelPart.NodesEnd(); ++node_i)
+        {
+            array_3d &nodal_variable = node_i->FastGetSolutionStepValue(rNodalVariable);
+            array_3d &node_normal = node_i->FastGetSolutionStepValue(rPlaneNormalVariable);
+
+            const double magnitude = inner_prod(nodal_variable, node_normal);
+            nodal_variable -= magnitude * node_normal;
+        }
+
+        KRATOS_CATCH("");
+    }
     // --------------------------------------------------------------------------
     void ExtractBoundaryNodes( std::string const& rBoundarySubModelPartName )
     {
@@ -157,11 +179,7 @@ public:
             KRATOS_ERROR_IF(elem_i.GetGeometry().Dimension() < domain_size) << "ExtractBoundaryNodes: This function does only work"
                 <<" for solid elements in 3D and surface elements in 2D!" << std::endl;
 
-            Element::GeometryType::GeometriesArrayType boundaries;
-            if (domain_size==3)
-                boundaries = elem_i.GetGeometry().Faces();
-            else if (domain_size == 2)
-                boundaries = elem_i.GetGeometry().Edges();
+            Element::GeometryType::GeometriesArrayType boundaries = elem_i.GetGeometry().GenerateBoundariesEntities();
 
             for(unsigned int boundary=0; boundary<boundaries.size(); boundary++)
             {
