@@ -1,5 +1,3 @@
-from __future__ import print_function, absolute_import, division  # makes these scripts backward compatible with python 2.6 and 2.7
-
 # Importing the Kratos Library
 import KratosMultiphysics as KM
 
@@ -14,9 +12,6 @@ def cs_print_info(label, *args):
 def cs_print_warning(label, *args):
     KM.Logger.PrintWarning(colors.bold(label), " ".join(map(str,args)))
 
-
-def UsingPyKratos():
-    return any(["pyKratos" in i_path for i_path in KM.__path__])
 
 def SettingsTypeCheck(settings):
     if not isinstance(settings, KM.Parameters):
