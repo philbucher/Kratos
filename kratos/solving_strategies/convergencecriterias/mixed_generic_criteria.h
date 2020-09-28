@@ -21,6 +21,7 @@
 #include "includes/define.h"
 #include "includes/model_part.h"
 #include "convergence_criteria.h"
+#include "utilities/color_utilities.h"
 
 // Application includes
 
@@ -363,7 +364,18 @@ protected:
             for(int i = 0; i < mVariableSize; i++) {
                 const auto r_var_data = mVariableDataVector[i];
                 const int key_map = mLocalKeyMap[r_var_data->Key()];
-                stringbuf << " " << r_var_data->Name() << " : ratio = " << var_ratio[key_map] << "; exp.ratio = " << mRatioToleranceVector[key_map] << " abs = " << var_abs[key_map] << " exp.abs = " << mAbsToleranceVector[key_map] << "\n";
+                stringbuf << " ";
+                #if defined(KRATOS_COLORED_OUTPUT)
+                const bool is_converged = var_ratio[key_map] <= mRatioToleranceVector[key_map] || var_abs[key_map] <= mAbsToleranceVector[key_map];
+                if (is_converged) {
+                    stringbuf << KGRN << r_var_data->Name() << RST;
+                } else {
+                    stringbuf << KRED << r_var_data->Name() << RST;
+                }
+                #else
+                stringbuf << r_var_data->Name();
+                #endif
+                stringbuf << " : ratio = " << var_ratio[key_map] << "; exp.ratio = " << mRatioToleranceVector[key_map] << " abs = " << var_abs[key_map] << " exp.abs = " << mAbsToleranceVector[key_map] << "\n";
             }
             KRATOS_INFO("") << stringbuf.str();
         }
