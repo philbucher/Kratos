@@ -122,30 +122,37 @@ public:
      * @param rResult: the elemental equation ID vector
      * @param rCurrentProcessInfo: the current process info instance
      */
-    void EquationIdVector(EquationIdVectorType& rResult, ProcessInfo& CurrentProcessInfo) override;
+    void EquationIdVector(EquationIdVectorType& rResult, const ProcessInfo& CurrentProcessInfo) const override;
 
     /**
      * determines the elemental list of DOFs
      * @param ElementalDofList: the list of DOFs
      * @param rCurrentProcessInfo: the current process info instance
      */
-    void GetDofList(DofsVectorType& rElementalDofList, ProcessInfo& CurrentProcessInfo) override;
+    void GetDofList(DofsVectorType& rElementalDofList, const ProcessInfo& CurrentProcessInfo) const override;
 
 
-        /**
+    /**
      * Getting method to obtain the variable which defines the degrees of freedom
      */
-    void GetValuesVector(Vector& values, int Step = 0) override;
+    void GetValuesVector(Vector& values, int Step = 0) const override;
 
     /**
      * Getting method to obtain the time derivative of variable which defines the degrees of freedom
      */
-    void GetFirstDerivativesVector(Vector& values, int Step = 0) override;
+    void GetFirstDerivativesVector(Vector& values, int Step = 0) const override;
 
     /**
      * Getting method to obtain the second time derivative of variable which defines the degrees of freedom
      */
-    void GetSecondDerivativesVector(Vector& values, int Step = 0) override;
+    void GetSecondDerivativesVector(Vector& values, int Step = 0) const override;
+
+    /**
+     * is called to initialize the element
+     * if the element needs to perform any operation before any calculation is done
+     * the elemental variables will be initialized and set using this method
+     */
+    void Initialize(const ProcessInfo& rCurrentProcessInfo) override;
 
     /**
      * this is called during the assembling process in order
@@ -158,7 +165,7 @@ public:
     void CalculateLocalSystem(
         MatrixType& rLeftHandSideMatrix,
         VectorType& rRightHandSideVector,
-        ProcessInfo& rCurrentProcessInfo) override;
+        const ProcessInfo& rCurrentProcessInfo) override;
 
     /**
      * this is called during the assembling process in order
@@ -166,7 +173,7 @@ public:
      * @param rLeftHandSideMatrix: the elemental left hand side matrix
      * @param rCurrentProcessInfo: the current process info instance
      */
-    void CalculateLeftHandSide(MatrixType& rLeftHandSideMatrix, ProcessInfo& rCurrentProcessInfo) override;
+    void CalculateLeftHandSide(MatrixType& rLeftHandSideMatrix, const ProcessInfo& rCurrentProcessInfo) override;
 
     /**
      * this is called during the assembling process in order
@@ -174,7 +181,7 @@ public:
      * @param rRightHandSideVector: the elemental right hand side vector
      * @param rCurrentProcessInfo: the current process info instance
      */
-    void CalculateRightHandSide(VectorType& rRightHandSideVector, ProcessInfo& rCurrentProcessInfo) override;
+    void CalculateRightHandSide(VectorType& rRightHandSideVector, const ProcessInfo& rCurrentProcessInfo) override;
 
     /**
      * this is called during the assembling process in order
@@ -182,7 +189,7 @@ public:
      * @param rMassMatrix: the elemental mass matrix
      * @param rCurrentProcessInfo: the current process info instance
      */
-    void CalculateMassMatrix(MatrixType& rMassMatrix, ProcessInfo& rCurrentProcessInfo) override;
+    void CalculateMassMatrix(MatrixType& rMassMatrix, const ProcessInfo& rCurrentProcessInfo) override;
 
     /**
      * this is called during the assembling process in order
@@ -190,7 +197,7 @@ public:
      * @param rDampingMatrix: the elemental damping matrix
      * @param rCurrentProcessInfo: the current process info instance
      */
-    void CalculateDampingMatrix(MatrixType& rDampingMatrix, ProcessInfo& rCurrentProcessInfo) override;
+    void CalculateDampingMatrix(MatrixType& rDampingMatrix, const ProcessInfo& rCurrentProcessInfo) override;
 
     /**
      * This method provides the place to perform checks on the completeness of the input
@@ -201,7 +208,7 @@ public:
      * @param rCurrentProcessInfo
      * this method is: MANDATORY
      */
-    int Check(const ProcessInfo& rCurrentProcessInfo) override;
+    int Check(const ProcessInfo& rCurrentProcessInfo) const override;
 
     ///@}
     ///@name Input and output
@@ -220,10 +227,17 @@ public:
 
 private:
 
+    ///@name Member Variables
+    ///@{
+
+    double mMass = 0.0;
+
+    ///@}
+
     ///@name Private Operations
     ///@{
 
-    void GenericGetValuesVector(Vector& rValues, int Step, const ArrayVariableType& rVariable);
+    void GenericGetValuesVector(Vector& rValues, int Step, const ArrayVariableType& rVariable) const;
 
     double GetElementMass() const;
 

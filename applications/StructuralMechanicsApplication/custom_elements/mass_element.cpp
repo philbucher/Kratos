@@ -74,7 +74,7 @@ Element::Pointer MassElement::Clone(IndexType NewId, NodesArrayType const& ThisN
     KRATOS_CATCH("");
 }
 
-void MassElement::EquationIdVector(EquationIdVectorType& rResult, ProcessInfo& CurrentProcessInfo)
+void MassElement::EquationIdVector(EquationIdVectorType& rResult, const ProcessInfo& CurrentProcessInfo) const
 {
     KRATOS_TRY;
 
@@ -96,7 +96,7 @@ void MassElement::EquationIdVector(EquationIdVectorType& rResult, ProcessInfo& C
     KRATOS_CATCH("")
 }
 
-void MassElement::GetDofList(DofsVectorType& rElementalDofList, ProcessInfo& CurrentProcessInfo)
+void MassElement::GetDofList(DofsVectorType& rElementalDofList, const ProcessInfo& CurrentProcessInfo) const
 {
     KRATOS_TRY;
 
@@ -117,7 +117,7 @@ void MassElement::GetDofList(DofsVectorType& rElementalDofList, ProcessInfo& Cur
     KRATOS_CATCH("")
 }
 
-void MassElement::GenericGetValuesVector(Vector& rValues, int Step, const ArrayVariableType& rVariable)
+void MassElement::GenericGetValuesVector(Vector& rValues, int Step, const ArrayVariableType& rVariable) const
 {
     KRATOS_TRY
 
@@ -140,31 +140,40 @@ void MassElement::GenericGetValuesVector(Vector& rValues, int Step, const ArrayV
     KRATOS_CATCH("")
 }
 
-void MassElement::GetValuesVector(Vector& rValues, int Step)
+void MassElement::GetValuesVector(Vector& rValues, int Step) const
 {
     GenericGetValuesVector(rValues, Step, DISPLACEMENT);
 }
 
-void MassElement::GetFirstDerivativesVector(Vector& rValues, int Step)
+void MassElement::GetFirstDerivativesVector(Vector& rValues, int Step) const
 {
     GenericGetValuesVector(rValues, Step, VELOCITY);
 }
 
-void MassElement::GetSecondDerivativesVector(Vector& rValues, int Step)
+void MassElement::GetSecondDerivativesVector(Vector& rValues, int Step) const
 {
     GenericGetValuesVector(rValues, Step, ACCELERATION);
+}
+
+void MassElement::Initialize(const ProcessInfo& rCurrentProcessInfo)
+{
+    if (!rCurrentProcessInfo[IS_RESTARTED]) {
+        // currently the mass is calculated using the current configuration
+        // hence the mass is saved as a member
+        mMass = GetElementMass();
+    }
 }
 
 void MassElement::CalculateLocalSystem(
     MatrixType& rLeftHandSideMatrix,
     VectorType& rRightHandSideVector,
-    ProcessInfo& rCurrentProcessInfo)
+    const ProcessInfo& rCurrentProcessInfo)
 {
     CalculateLeftHandSide(rLeftHandSideMatrix, rCurrentProcessInfo);
     CalculateRightHandSide(rRightHandSideVector, rCurrentProcessInfo);
 }
 
-void MassElement::CalculateLeftHandSide(MatrixType& rLeftHandSideMatrix, ProcessInfo& rCurrentProcessInfo)
+void MassElement::CalculateLeftHandSide(MatrixType& rLeftHandSideMatrix, const ProcessInfo& rCurrentProcessInfo)
 {
     const SizeType system_size = GetGeometry().PointsNumber() * 3;
     if (rLeftHandSideMatrix.size1() != system_size) {
@@ -174,7 +183,7 @@ void MassElement::CalculateLeftHandSide(MatrixType& rLeftHandSideMatrix, Process
     noalias(rLeftHandSideMatrix) = ZeroMatrix(system_size, system_size);
 }
 
-void MassElement::CalculateRightHandSide(VectorType& rRightHandSideVector, ProcessInfo& rCurrentProcessInfo)
+void MassElement::CalculateRightHandSide(VectorType& rRightHandSideVector, const ProcessInfo& rCurrentProcessInfo)
 {
     KRATOS_TRY
     const SizeType system_size = GetGeometry().PointsNumber() * 3;
@@ -187,13 +196,11 @@ void MassElement::CalculateRightHandSide(VectorType& rRightHandSideVector, Proce
     const auto& r_geom = GetGeometry();
     const SizeType number_of_nodes = r_geom.PointsNumber();
 
-    const double total_mass = GetElementMass();
-
     Vector lump_fact = ZeroVector(number_of_nodes);
     r_geom.LumpingFactors(lump_fact);
 
     for (SizeType i=0; i<number_of_nodes; ++i) {
-        const double temp = lump_fact[i] * total_mass;
+        const double temp = lump_fact[i] * mMass;
 
         for (SizeType j=0; j<3; ++j) {
             const SizeType index = i * 3 + j;
@@ -203,7 +210,7 @@ void MassElement::CalculateRightHandSide(VectorType& rRightHandSideVector, Proce
     KRATOS_CATCH("")
 }
 
-void MassElement::CalculateMassMatrix(MatrixType& rMassMatrix, ProcessInfo& rCurrentProcessInfo)
+void MassElement::CalculateMassMatrix(MatrixType& rMassMatrix, const ProcessInfo& rCurrentProcessInfo)
 {
     KRATOS_TRY
     const auto& r_geom = GetGeometry();
@@ -221,10 +228,8 @@ void MassElement::CalculateMassMatrix(MatrixType& rMassMatrix, ProcessInfo& rCur
     Vector lump_fact = ZeroVector(number_of_nodes);
     r_geom.LumpingFactors(lump_fact);
 
-    const double total_mass = GetElementMass();
-
     for (SizeType i=0; i<number_of_nodes; ++i) {
-        const double temp = lump_fact[i] * total_mass;
+        const double temp = lump_fact[i] * mMass;
 
         for (SizeType j=0; j<3; ++j) {
             const SizeType index = i * 3 + j;
@@ -235,7 +240,7 @@ void MassElement::CalculateMassMatrix(MatrixType& rMassMatrix, ProcessInfo& rCur
     KRATOS_CATCH("")
 }
 
-void MassElement::CalculateDampingMatrix(MatrixType& rDampingMatrix, ProcessInfo& rCurrentProcessInfo)
+void MassElement::CalculateDampingMatrix(MatrixType& rDampingMatrix, const ProcessInfo& rCurrentProcessInfo)
 {
     StructuralMechanicsElementUtilities::CalculateRayleighDampingMatrix(
         *this,
@@ -272,7 +277,7 @@ double MassElement::GetElementMass() const
     KRATOS_CATCH("")
 }
 
-int MassElement::Check(const ProcessInfo& rCurrentProcessInfo)
+int MassElement::Check(const ProcessInfo& rCurrentProcessInfo) const
 {
     KRATOS_TRY
 
@@ -280,7 +285,6 @@ int MassElement::Check(const ProcessInfo& rCurrentProcessInfo)
 
     const double numerical_limit = std::numeric_limits<double>::epsilon();
     const SizeType number_of_nodes = GetGeometry().PointsNumber();
-    const SizeType dim = GetGeometry().WorkingSpaceDimension();
     const SizeType local_dim = GetGeometry().LocalSpaceDimension();
 
     // Check that the element's nodes contain all required SolutionStepData and Degrees of freedom
@@ -292,18 +296,7 @@ int MassElement::Check(const ProcessInfo& rCurrentProcessInfo)
         KRATOS_CHECK_DOF_IN_NODE(DISPLACEMENT_Z, r_node);
     }
 
-    // verify that the variables are correctly initialized
-    KRATOS_CHECK_VARIABLE_KEY(DISPLACEMENT);
-    KRATOS_CHECK_VARIABLE_KEY(VELOCITY);
-    KRATOS_CHECK_VARIABLE_KEY(ACCELERATION);
-    KRATOS_CHECK_VARIABLE_KEY(DENSITY);
-    KRATOS_CHECK_VARIABLE_KEY(CROSS_AREA);
-    KRATOS_CHECK_VARIABLE_KEY(THICKNESS);
-    KRATOS_CHECK_VARIABLE_KEY(VOLUME_ACCELERATION)
-
-    if (GetProperties().Has(DENSITY) == false) {
-        KRATOS_ERROR << "DENSITY not provided for this element #" << Id() << std::endl;
-    }
+    KRATOS_ERROR_IF_NOT(GetProperties().Has(DENSITY)) << "DENSITY not provided for this element #" << Id() << std::endl;
 
     // dimension specific checks
     if (local_dim == 1) { // line
@@ -318,9 +311,8 @@ int MassElement::Check(const ProcessInfo& rCurrentProcessInfo)
         KRATOS_ERROR_IF(GetGeometry().Area() <= 0) << "On element #" << Id() << "; Area cannot be less than or equal to 0" << std::endl;
 
         KRATOS_ERROR_IF(GetProperties().Has(THICKNESS) == false || GetProperties()[THICKNESS] <= numerical_limit) << "THICKNESS not provided for this element #" << Id() << std::endl;
-
     } else {
-        KRATOS_ERROR << "Wrong local space dimension, can only be 2 (line) or 3 (surface), got: " << dim << " !" << std::endl;
+        KRATOS_ERROR << "Wrong local space dimension, can only be 2 (line) or 3 (surface), got: " << local_dim << " !" << std::endl;
     }
 
     return 0;
@@ -362,11 +354,13 @@ void MassElement::PrintData(std::ostream& rOStream) const
 void MassElement::save(Serializer& rSerializer) const
 {
     KRATOS_SERIALIZE_SAVE_BASE_CLASS(rSerializer, Element );
+    rSerializer.save("mass", mMass);
 }
 
 void MassElement::load(Serializer& rSerializer)
 {
     KRATOS_SERIALIZE_LOAD_BASE_CLASS(rSerializer, Element );
+    rSerializer.load("mass", mMass);
 }
 
 ///@}
