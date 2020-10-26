@@ -45,19 +45,59 @@ class TrilinosImplicitMechanicalSolver(TrilinosMechanicalSolver):
         self._add_dynamic_dofs()
         KratosMultiphysics.Logger.PrintInfo("::[TrilinosImplicitMechanicalSolver]:: DOF's ADDED")
 
+    def GetMinimumBufferSize(self):
+        base_min_buffer_size = super().GetMinimumBufferSize()
+
+        scheme_type = self.settings["scheme_type"].GetString()
+        if "bdf" in scheme_type or scheme_type == "backward_euler":
+            return max(base_min_buffer_size, self._bdf_integration_order()+1)
+        else:
+            return base_min_buffer_size
+
     #### Private functions ####
 
     def _create_solution_scheme(self):
         scheme_type = self.settings["scheme_type"].GetString()
-        self.main_model_part.ProcessInfo[StructuralMechanicsApplication.RAYLEIGH_ALPHA] = self.settings["rayleigh_alpha"].GetDouble()
-        self.main_model_part.ProcessInfo[StructuralMechanicsApplication.RAYLEIGH_BETA] = self.settings["rayleigh_beta"].GetDouble()
+        process_info = self.main_model_part.ProcessInfo
+        process_info[StructuralMechanicsApplication.RAYLEIGH_ALPHA] = self.settings["rayleigh_alpha"].GetDouble()
+        process_info[StructuralMechanicsApplication.RAYLEIGH_BETA] = self.settings["rayleigh_beta"].GetDouble()
         if (scheme_type == "newmark"):
             damp_factor_m = 0.0
+            mechanical_scheme = TrilinosApplication.TrilinosResidualBasedBossakDisplacementScheme(damp_factor_m)
         elif (scheme_type == "bossak"):
             damp_factor_m = self.settings["damp_factor_m"].GetDouble()
+            mechanical_scheme = TrilinosApplication.TrilinosResidualBasedBossakDisplacementScheme(damp_factor_m)
+        elif scheme_type.startswith("bdf") or scheme_type == "backward_euler" :
+            order = self._bdf_integration_order()
+            # In case of rotation dof we declare the dynamic variables
+            if self.settings["rotation_dofs"].GetBool():
+                bdf_parameters = KratosMultiphysics.Parameters(""" {
+                    "domain_size"           : 3,
+                    "integration_order"     : 2,
+                    "solution_variables"    : ["DISPLACEMENT","ROTATION"]
+                } """)
+                bdf_parameters["domain_size"].SetInt(process_info[KratosMultiphysics.DOMAIN_SIZE])
+                mechanical_scheme = TrilinosApplication.TrilinosResidualBasedBDFCustomScheme(order, bdf_parameters)
+            else:
+                mechanical_scheme = TrilinosApplication.TrilinosResidualBasedBDFDisplacementScheme(order)
         else:
             err_msg =  "The requested scheme type \"" + scheme_type + "\" is not available!\n"
             err_msg += "Available options are: \"newmark\", \"bossak\""
             raise Exception(err_msg)
-        mechanical_scheme = TrilinosApplication.TrilinosResidualBasedBossakDisplacementScheme(damp_factor_m)
         return mechanical_scheme
+
+    def _bdf_integration_order(self):
+        scheme_type = self.settings["scheme_type"].GetString()
+        if scheme_type == "backward_euler":
+            order = 1
+        else:
+            if scheme_type == "bdf":
+                raise Exception('Wrong input for scheme type: "bdf"! Please append the order to the bdf-scheme, e.g. "bdf2"')
+            # BDF schemes can be from 1 to 5 order, so in order to detect the integration order from the scheme_type we remove the "bdf" string, that is, if the user tells bdf3 only 3 will remain when we remove bdf which corresponds to the method of choice
+            order = int(scheme_type.replace("bdf", ""))
+
+        # Warning
+        if (order > 2):
+            KratosMultiphysics.Logger.PrintWarning("WARNING:: BDF Order: ", str(order) + " constant time step must be considered")
+
+        return order
