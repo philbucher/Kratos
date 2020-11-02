@@ -19,7 +19,9 @@ class FLOWerWrapper(CoSimulationSolverWrapper):
         settings_defaults = KM.Parameters("""{
             "model_parts_read" : { },
             "model_parts_send" : { },
-            "model_parts_recv" : { }
+            "model_parts_recv" : { },
+            "export_data"      : [ ],
+            "import_data"      : [ ]
         }""")
 
         self.settings["solver_wrapper_settings"].ValidateAndAssignDefaults(settings_defaults)
@@ -48,8 +50,25 @@ class FLOWerWrapper(CoSimulationSolverWrapper):
 
             self.ImportCouplingInterface(interface_config)
 
+    def SolveSolutionStep(self):
+        for data_name in self.settings["solver_wrapper_settings"]["export_data"].GetStringArray():
+            data_config = {
+                "type" : "coupling_interface_data",
+                "interface_data" : self.GetInterfaceData(data_name)
+            }
+            self.ExportData(data_config)
+
+        super().SolveSolutionStep()
+
+        for data_name in self.settings["solver_wrapper_settings"]["import_data"].GetStringArray():
+            data_config = {
+                "type" : "coupling_interface_data",
+                "interface_data" : self.GetInterfaceData(data_name)
+            }
+            self.ImportData(data_config)
+
     def AdvanceInTime(self, current_time):
         return 0.0 # TODO find a better solution here... maybe get time from solver through IO
 
     def _GetIOType(self):
-        return self.settings["io_settings"]["type"].GetString()
+        return "empire_io" # FLOWer currently only supports the EmpireIO
