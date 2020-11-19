@@ -100,7 +100,13 @@ class EmpireIO(CoSimulationIO):
         data_type = data_config["type"]
         if data_type == "coupling_interface_data":
             interface_data = data_config["interface_data"]
-            KratosCoSim.EMPIRE_API.EMPIRE_API_recvDataField(interface_data.GetModelPart(), self.solver_name+"_"+interface_data.name, interface_data.variable)
+
+            model_part = self.__GetModelPartForAPICalls(interface_data)
+
+            if self.rank == 0:
+                KratosCoSim.EMPIRE_API.EMPIRE_API_recvDataField(interface_data.GetModelPart(), self.solver_name+"_"+interface_data.name, interface_data.variable)
+
+            self.__ScatterData(interface_data)
         else:
             raise NotImplementedError('Importing interface data of type "{}" is not implemented for this IO: "{}"'.format(data_type, self._ClassName()))
 
@@ -108,9 +114,16 @@ class EmpireIO(CoSimulationIO):
         data_type = data_config["type"]
         if data_type == "coupling_interface_data":
             interface_data = data_config["interface_data"]
-            KratosCoSim.EMPIRE_API.EMPIRE_API_sendDataField(interface_data.GetModelPart(), self.solver_name+"_"+interface_data.name, interface_data.variable)
+
+            model_part = self.__GetModelPartForAPICalls(interface_data)
+            self.__GatherData(interface_data)
+
+            if self.rank == 0:
+                KratosCoSim.EMPIRE_API.EMPIRE_API_sendDataField(interface_data.GetModelPart(), self.solver_name+"_"+interface_data.name, interface_data.variable)
+
         elif data_type == "convergence_signal":
-            KratosCoSim.EMPIRE_API.EMPIRE_API_sendConvergenceSignal(data_config["is_converged"], self.solver_name)
+            if self.rank == 0:
+                KratosCoSim.EMPIRE_API.EMPIRE_API_sendConvergenceSignal(data_config["is_converged"], self.solver_name)
         else:
             raise NotImplementedError('Exporting interface data of type "{}" is not implemented for this IO: "{}"'.format(data_type, self._ClassName()))
 
