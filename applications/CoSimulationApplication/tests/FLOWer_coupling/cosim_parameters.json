@@ -5,7 +5,7 @@
         "end_time" : 5.0,
         "echo_level" : 0,
         "print_colors" : true,
-        "parallel_type" : "OpenMP"
+        "parallel_type" : "MPI"
     },
     "solver_settings" :
     {
@@ -41,7 +41,7 @@
                         "data"           : "Interface_inlet_velocity",
                         "to_solver"      : "kratos_dummy",
                         "to_solver_data" : "Interface_velocity",
-                        "data_transfer_operator" : "copy_transfer"
+                        "data_transfer_operator" : "shared_points_mapper"
                     }
                 ]
             }
@@ -53,8 +53,14 @@
                     "mapper_type" : "nearest_neighbor"
                 }
             },
-            "copy_transfer" : {
-                "type" : "copy"
+            "shared_points_mapper" : {
+                "type" : "kratos_mapping",
+                "mapper_settings" : {
+                    "mapper_type" : "nearest_neighbor",
+                    "search_radius"                : 0.001,
+                    "search_iterations"            : 1,
+                    "echo_level" : 3
+                }
             }
         },
         "solvers" :
@@ -71,8 +77,8 @@
                         "Fluid_copy.AutomaticInlet2D_Inlet" : "Interface_Inlet_vel"
                     },
                     "model_parts_recv" : {
-                        "Fluid.NoSlip2D_FSI"    : "Interface_1_coupling",
-                        "Fluid2.Outlet2D_Outlet" : "Interface_2_Outlet"
+                        "Fluid_NoSlip2D_FSI"    : "Interface_1_coupling",
+                        "Fluid2_Outlet2D_Outlet" : "Interface_2_Outlet"
                     },
                     "export_data"      : ["Interface_1_disp", "Interface_2_rot"],
                     "import_data"      : ["Interface_1_force", "Interface_inlet_velocity"]
@@ -82,17 +88,17 @@
                 },
                 "data" : {
                     "Interface_1_disp" : {
-                        "model_part_name"   : "Fluid.NoSlip2D_FSI",
+                        "model_part_name"   : "Fluid_NoSlip2D_FSI",
                         "dimension" : 2,
                         "variable_name" : "DISPLACEMENT"
                     },
                     "Interface_1_force" : {
-                        "model_part_name"   : "Fluid.NoSlip2D_FSI",
+                        "model_part_name"   : "Fluid_NoSlip2D_FSI",
                         "dimension" : 2,
                         "variable_name" : "FORCE"
                     },
                     "Interface_2_rot" : {
-                        "model_part_name"   : "Fluid2.Outlet2D_Outlet",
+                        "model_part_name"   : "Fluid2_Outlet2D_Outlet",
                         "dimension" : 2,
                         "variable_name" : "ROTATION"
                     },
