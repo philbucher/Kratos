@@ -128,3 +128,44 @@ class EmpireIO(CoSimulationIO):
         this_defaults.AddMissingParameters(super()._GetDefaultParameters())
 
         return this_defaults
+
+
+    def __GetModelPartForAPICalls(self, interface_data):
+        model_part = interface_data.GetModelPart()
+        if not model_part.IsDistributed():
+            return model_part
+
+        aux_mp_name = self.__GetNameOfAuxModelPartFromInterfaceData(interface_data)
+        if self.aux_model.HasModelPart(aux_mp_name):
+            return self.aux_model[aux_mp_name]
+        else:
+            cs_tools.cs_print_info(self._ClassName(), 'Creating gathered modelpart for "{}"'.format(model_part.FullName()))
+            gather_mp = self.aux_model.CreateModelPart(aux_mp_name)
+            gather_mp.AddNodalSolutionStepVariable(KM.PARTITION_INDEX)
+            if interface_data.location != "node_historical":
+                raise Exception("Currently only nodal historical values are supported!")
+            gather_mp.AddNodalSolutionStepVariable(interface_data.variable)
+            self.gather_utilities[aux_mp_name] = KratosMPI.GatherModelPartUtility(0, model_part, 0, gather_mp)
+            return gather_mp
+
+    def __ScatterData(self, interface_data):
+        model_part = interface_data.GetModelPart()
+        if not model_part.IsDistributed():
+            # do nothing if ModelPart is not distributed
+            return
+
+        aux_mp_name = self.__GetNameOfAuxModelPartFromInterfaceData(interface_data)
+        self.gather_utilities[aux_mp_name].ScatterFromMaster(interface_data.variable)
+
+
+    def __GatherData(self, interface_data):
+        model_part = interface_data.GetModelPart()
+        if not model_part.IsDistributed():
+            # do nothing if ModelPart is not distributed
+            return
+
+        aux_mp_name = self.__GetNameOfAuxModelPartFromInterfaceData(interface_data)
+        self.gather_utilities[aux_mp_name].GatherOnMaster(interface_data.variable)
+
+    def __GetNameOfAuxModelPartFromInterfaceData(self, interface_data):
+        return "aux_" + interface_data.model_part_name.replace(".", "-") + "_var_" + interface_data.variable.Name()
