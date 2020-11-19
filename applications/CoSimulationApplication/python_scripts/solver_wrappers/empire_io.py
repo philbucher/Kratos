@@ -58,12 +58,24 @@ class EmpireIO(CoSimulationIO):
         model_part_name = interface_config["model_part_name"]
         comm_name = interface_config["comm_name"]
 
-        if not self.model.HasModelPart(model_part_name):
-            main_model_part_name, *sub_model_part_names = model_part_name.split(".")
-            model_part_utilities.RecursiveCreateModelParts(self.model[main_model_part_name], ".".join(sub_model_part_names))
+        if len(model_part_name.split(".")) > 1:
+            raise Exception("SubModelParts are not yet supported for importing!")
 
-        model_part = self.model[model_part_name]
-        KratosCoSim.EMPIRE_API.EMPIRE_API_recvMesh(model_part, comm_name)
+        if not self.model.HasModelPart(model_part_name):
+            model_part = self.model.CreateModelPart(model_part_name)
+        else:
+            model_part = self.model[model_part_name]
+            if model_part.GetCommunicator().GlobalNumberOfNodes() > 0:
+                raise Exception('The ModelPart with name "{}" has Nodes already!'.format(model_part_name))
+
+        if self.is_distributed:
+            model_part.AddNodalSolutionStepVariable(KM.PARTITION_INDEX)
+
+        if self.rank == 0:
+            KratosCoSim.EMPIRE_API.EMPIRE_API_recvMesh(model_part, comm_name)
+
+        if self.is_distributed:
+            KratosMPI.DistributedModelPartInitializer(model_part,0).Execute()
 
     def ExportCouplingInterface(self, interface_config):
         model_part_name = interface_config["model_part_name"]
