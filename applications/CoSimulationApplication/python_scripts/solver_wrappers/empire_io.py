@@ -1,6 +1,9 @@
 # Importing the Kratos Library
 import KratosMultiphysics as KM
 from KratosMultiphysics import kratos_utilities
+default_data_comm = KM.DataCommunicator.GetDefault()
+if default_data_comm.IsDistributed():
+    import KratosMultiphysics.mpi as KratosMPI
 
 # Importing the base class
 from KratosMultiphysics.CoSimulationApplication.base_classes.co_simulation_io import CoSimulationIO
@@ -23,20 +26,30 @@ class EmpireIO(CoSimulationIO):
     """
     def __init__(self, settings, model, solver_name):
         super().__init__(settings, model, solver_name)
-        # Note: calling "EMPIRE_API_Connect" is NOT necessary, it is replaced by the next two lines
-        KratosCoSim.EMPIRE_API.EMPIRE_API_SetEchoLevel(self.echo_level)
-        KratosCoSim.EMPIRE_API.EMPIRE_API_PrintTiming(self.settings["api_print_timing"].GetBool())
+        self.rank = default_data_comm.Rank()
+        self.is_distributed = default_data_comm.IsDistributed()
+        if self.rank == 0:
+            # Note: calling "EMPIRE_API_Connect" is NOT necessary, it is replaced by the next two lines
+            KratosCoSim.EMPIRE_API.EMPIRE_API_SetEchoLevel(self.echo_level)
+            KratosCoSim.EMPIRE_API.EMPIRE_API_PrintTiming(self.settings["api_print_timing"].GetBool())
 
-        # delete and recreate communication folder to avoid leftover files
-        kratos_utilities.DeleteDirectoryIfExisting(communication_folder)
-        os.mkdir(communication_folder)
+            # delete and recreate communication folder to avoid leftover files
+            kratos_utilities.DeleteDirectoryIfExisting(communication_folder)
+            os.mkdir(communication_folder)
+
+        self.aux_model = KM.Model()
+        if self.is_distributed:
+            # creating auxiliar Model for gathering ModelParts on rank 0
+            self.gather_utilities = {}
+
+        default_data_comm.Barrier()
 
     def Finalize(self):
         kratos_utilities.DeleteDirectoryIfExisting(communication_folder)
 
     def __del__(self):
         # make sure no communication files are left even if simulation is terminated prematurely
-        if os.path.isdir(communication_folder):
+        if os.path.isdir(communication_folder) and self.rank == 0:
             kratos_utilities.DeleteDirectoryIfExisting(communication_folder)
             if self.echo_level > 0:
                 cs_tools.cs_print_info(self._ClassName(), "Deleting Communication folder in destructor")
