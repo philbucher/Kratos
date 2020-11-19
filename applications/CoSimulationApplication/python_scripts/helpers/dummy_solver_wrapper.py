@@ -6,6 +6,7 @@ from KratosMultiphysics.CoSimulationApplication.base_classes.co_simulation_solve
 
 # Other imports
 from KratosMultiphysics.CoSimulationApplication.utilities import model_part_utilities
+from KratosMultiphysics.testing.utilities import ReadModelPart
 
 def Create(settings, model, solver_name):
     return DummySolverWrapper(settings, model, solver_name)
@@ -29,8 +30,7 @@ class DummySolverWrapper(CoSimulationSolverWrapper):
     def Initialize(self):
         severity = KM.Logger.GetDefaultOutput().GetSeverity()
         KM.Logger.GetDefaultOutput().SetSeverity(KM.Logger.Severity.WARNING) # mute MP-IO
-        model_part_io = KM.ModelPartIO(self.settings["solver_wrapper_settings"]["mdpa_file_name"].GetString())
-        model_part_io.ReadModelPart(self.model_part)
+        ReadModelPart(self.settings["solver_wrapper_settings"]["mdpa_file_name"].GetString(), self.model_part)
         KM.Logger.GetDefaultOutput().SetSeverity(severity)
 
         super().Initialize()
