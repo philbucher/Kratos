@@ -60,7 +60,6 @@ void ReceiveArray(const std::string& rName, const int sizeOfArray, pybind11::lis
 void sendDataField_scalar(const ModelPart& rModelPart, const std::string& rName, const Variable<double>& rVariable)
 {
     KRATOS_ERROR_IF_NOT(rModelPart.HasNodalSolutionStepVariable(rVariable)) << "Missing nodal solutionstepvariable: " << rVariable.Name() << std::endl;
-    KRATOS_ERROR_IF(rModelPart.IsDistributed()) << "ModelPart cannot be distributed!" << std::endl;
 
     const int size = rModelPart.NumberOfNodes();
     std::vector<double> values(size);
@@ -81,7 +80,6 @@ void sendDataField_scalar_DefaultName(ModelPart& rModelPart, const Variable<doub
 void recvDataField_scalar(ModelPart& rModelPart, const std::string rName, const Variable<double>& rVariable)
 {
     KRATOS_ERROR_IF_NOT(rModelPart.HasNodalSolutionStepVariable(rVariable)) << "Missing nodal solutionstepvariable: " << rVariable.Name() << std::endl;
-    KRATOS_ERROR_IF(rModelPart.IsDistributed()) << "ModelPart cannot be distributed!" << std::endl;
 
     const int size = rModelPart.NumberOfNodes();
     std::vector<double> values(size);
@@ -103,7 +101,6 @@ void recvDataField_scalar_DefaultName(ModelPart& rModelPart, const Variable<doub
 void sendDataField_vector(const ModelPart& rModelPart, const std::string& rName, const Variable< array_1d<double, 3> >& rVariable)
 {
     KRATOS_ERROR_IF_NOT(rModelPart.HasNodalSolutionStepVariable(rVariable)) << "Missing nodal solutionstepvariable: " << rVariable.Name() << std::endl;
-    KRATOS_ERROR_IF(rModelPart.IsDistributed()) << "ModelPart cannot be distributed!" << std::endl;
 
     const int size = rModelPart.NumberOfNodes()*3;
     std::vector<double> values(size);
@@ -127,7 +124,6 @@ void sendDataField_vector_DefaultName(ModelPart& rModelPart, const Variable< arr
 void recvDataField_vector(ModelPart& rModelPart, const std::string& rName, const Variable< array_1d<double, 3> >& rVariable)
 {
     KRATOS_ERROR_IF_NOT(rModelPart.HasNodalSolutionStepVariable(rVariable)) << "Missing nodal solutionstepvariable: " << rVariable.Name() << std::endl;
-    KRATOS_ERROR_IF(rModelPart.IsDistributed()) << "ModelPart cannot be distributed!" << std::endl;
 
     const int size = rModelPart.NumberOfNodes()*3;
     std::vector<double> values(size);
@@ -153,7 +149,6 @@ void sendDataField_doubleVector(const ModelPart& rModelPart, const std::string& 
 {
     KRATOS_ERROR_IF_NOT(rModelPart.HasNodalSolutionStepVariable(rVariable1)) << "Missing nodal solutionstepvariable: " << rVariable1.Name() << std::endl;
     KRATOS_ERROR_IF_NOT(rModelPart.HasNodalSolutionStepVariable(rVariable2)) << "Missing nodal solutionstepvariable: " << rVariable2.Name() << std::endl;
-    KRATOS_ERROR_IF(rModelPart.IsDistributed()) << "ModelPart cannot be distributed!" << std::endl;
 
     const int size = rModelPart.NumberOfNodes()*6;
     std::vector<double> values(size);
@@ -183,7 +178,6 @@ void recvDataField_doubleVector(ModelPart& rModelPart, const std::string& rName,
 {
     KRATOS_ERROR_IF_NOT(rModelPart.HasNodalSolutionStepVariable(rVariable1)) << "Missing nodal solutionstepvariable: " << rVariable1.Name() << std::endl;
     KRATOS_ERROR_IF_NOT(rModelPart.HasNodalSolutionStepVariable(rVariable2)) << "Missing nodal solutionstepvariable: " << rVariable2.Name() << std::endl;
-    KRATOS_ERROR_IF(rModelPart.IsDistributed()) << "ModelPart cannot be distributed!" << std::endl;
 
     const int size = rModelPart.NumberOfNodes()*6;
     std::vector<double> values(size);
@@ -261,7 +255,6 @@ static void createModelPartFromReceivedMesh(const int numNodes, const int numEle
 {
     KRATOS_ERROR_IF(rModelPart.NumberOfNodes() > 0) << "ModelPart is not empty, it has nodes!" << std::endl;
     KRATOS_ERROR_IF(rModelPart.NumberOfProperties() > 0) << "ModelPart is not empty, it has properties!" << std::endl;
-    KRATOS_ERROR_IF(rModelPart.IsDistributed()) << "ModelPart cannot be distributed!" << std::endl;
 
     const std::unordered_map<int, std::string> element_name_map = {
         // {1 , "Element3D1N"}, // does not yet exist
