@@ -164,6 +164,10 @@ public:
                                      JsonParameters)
     {
         this->ValidateInput();
+
+        KRATOS_ERROR_IF_NOT(rModelPartOrigin.GetCommunicator().GlobalNumberOfNodes() > 0) << "No nodes exist in ModelPart \"" << rModelPartOrigin.FullName() << "\"" << std::endl;
+        KRATOS_ERROR_IF_NOT(rModelPartDestination.GetCommunicator().GlobalNumberOfNodes() > 0) << "No nodes exist in ModelPart \"" << rModelPartDestination.FullName() << "\"" << std::endl;
+
         this->Initialize();
     }
 
