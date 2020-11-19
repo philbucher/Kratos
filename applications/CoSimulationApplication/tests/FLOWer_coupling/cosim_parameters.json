@@ -58,8 +58,7 @@
                 "mapper_settings" : {
                     "mapper_type" : "nearest_neighbor",
                     "search_radius"                : 0.001,
-                    "search_iterations"            : 1,
-                    "echo_level" : 3
+                    "search_iterations"            : 1
                 }
             }
         },
