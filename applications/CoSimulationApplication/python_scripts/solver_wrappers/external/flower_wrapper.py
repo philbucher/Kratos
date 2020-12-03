@@ -21,13 +21,16 @@ class FLOWerWrapper(CoSimulationSolverWrapper):
             "model_parts_send" : { },
             "model_parts_recv" : { },
             "export_data"      : [ ],
-            "import_data"      : [ ]
+            "import_data"      : [ ],
+            "interval"         : [0.0, "End"]
         }""")
 
         self.settings["solver_wrapper_settings"].ValidateAndAssignDefaults(settings_defaults)
 
         model_part_utilities.CreateMainModelPartsFromCouplingDataSettings(self.settings["data"], self.model, self.name)
         model_part_utilities.AllocateHistoricalVariablesFromCouplingDataSettings(self.settings["data"], self.model, self.name)
+
+        self.interval_utility = KM.IntervalUtility(self.settings["solver_wrapper_settings"])
 
     def Initialize(self):
         super().Initialize()
@@ -51,23 +54,26 @@ class FLOWerWrapper(CoSimulationSolverWrapper):
             self.ImportCouplingInterface(interface_config)
 
     def SolveSolutionStep(self):
-        for data_name in self.settings["solver_wrapper_settings"]["export_data"].GetStringArray():
-            data_config = {
-                "type" : "coupling_interface_data",
-                "interface_data" : self.GetInterfaceData(data_name)
-            }
-            self.ExportData(data_config)
+        if self.interval_utility.IsInInterval(self.current_time):
 
-        super().SolveSolutionStep()
+            for data_name in self.settings["solver_wrapper_settings"]["export_data"].GetStringArray():
+                data_config = {
+                    "type" : "coupling_interface_data",
+                    "interface_data" : self.GetInterfaceData(data_name)
+                }
+                self.ExportData(data_config)
 
-        for data_name in self.settings["solver_wrapper_settings"]["import_data"].GetStringArray():
-            data_config = {
-                "type" : "coupling_interface_data",
-                "interface_data" : self.GetInterfaceData(data_name)
-            }
-            self.ImportData(data_config)
+            super().SolveSolutionStep()
+
+            for data_name in self.settings["solver_wrapper_settings"]["import_data"].GetStringArray():
+                data_config = {
+                    "type" : "coupling_interface_data",
+                    "interface_data" : self.GetInterfaceData(data_name)
+                }
+                self.ImportData(data_config)
 
     def AdvanceInTime(self, current_time):
+        self.current_time = current_time
         return 0.0 # TODO find a better solution here... maybe get time from solver through IO
 
     def _GetIOType(self):
