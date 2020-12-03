@@ -71,6 +71,8 @@ class FLOWerWrapper(CoSimulationSolverWrapper):
                     "interface_data" : self.GetInterfaceData(data_name)
                 }
                 self.ImportData(data_config)
+        else:
+            KM.Logger.PrintInfo("FlowerWrapper", "Data sync not in interval: "+std(self.current_time))
 
     def AdvanceInTime(self, current_time):
         self.current_time = current_time
