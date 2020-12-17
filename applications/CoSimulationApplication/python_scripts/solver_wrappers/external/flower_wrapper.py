@@ -1,5 +1,8 @@
 # Importing the Kratos Library
 import KratosMultiphysics as KM
+default_data_comm = KM.DataCommunicator.GetDefault()
+if default_data_comm.IsDistributed():
+    import KratosMultiphysics.mpi as KratosMPI
 
 # Importing the base class
 from KratosMultiphysics.CoSimulationApplication.base_classes.co_simulation_solver_wrapper import CoSimulationSolverWrapper
@@ -15,6 +18,8 @@ class FLOWerWrapper(CoSimulationSolverWrapper):
     """
     def __init__(self, settings, model, solver_name):
         super().__init__(settings, model, solver_name)
+        self.rank = default_data_comm.Rank()
+        self.is_distributed = default_data_comm.IsDistributed()
 
         settings_defaults = KM.Parameters("""{
             "model_parts_read" : { },
@@ -36,7 +41,11 @@ class FLOWerWrapper(CoSimulationSolverWrapper):
         super().Initialize()
 
         for main_model_part_name, mdpa_file_name in self.settings["solver_wrapper_settings"]["model_parts_read"].items():
-            KM.ModelPartIO(mdpa_file_name.GetString()).ReadModelPart(self.model[main_model_part_name])
+            if self.rank == 0:
+                KM.ModelPartIO(mdpa_file_name.GetString()).ReadModelPart(self.model[main_model_part_name])
+
+            if self.is_distributed:
+                KratosMPI.DistributedModelPartInitializer(self.model[main_model_part_name],0).Execute()
 
         for model_part_name, comm_name in self.settings["solver_wrapper_settings"]["model_parts_send"].items():
             interface_config = {
