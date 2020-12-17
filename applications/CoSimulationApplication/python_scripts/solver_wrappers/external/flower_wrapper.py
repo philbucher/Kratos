@@ -42,6 +42,8 @@ class FLOWerWrapper(CoSimulationSolverWrapper):
 
         for main_model_part_name, mdpa_file_name in self.settings["solver_wrapper_settings"]["model_parts_read"].items():
             if self.rank == 0:
+                if self.is_distributed:
+                    self.model[main_model_part_name].AddNodalSolutionStepVariable(KM.PARTITION_INDEX)
                 KM.ModelPartIO(mdpa_file_name.GetString()).ReadModelPart(self.model[main_model_part_name])
 
             if self.is_distributed:
