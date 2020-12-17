@@ -26,7 +26,6 @@ class DistributedMapperWrapper(PythonMapper):
 
         if default_data_comm.Rank() == 0:
             self._mapper = CreateMapper(self.gathered_model_part_origin, self.gathered_model_part_dest, mapper_settings["inner_mapper_settings"])
-            stop
 
     @classmethod
     def _GetDefaultParameters(cls):
