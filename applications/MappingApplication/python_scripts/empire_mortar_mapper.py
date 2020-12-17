@@ -30,9 +30,6 @@ class EmpireMortarMapper(PythonMapper):
     def __init__(self, model_part_origin, model_part_destination, mapper_settings):
         super().__init__(model_part_origin, model_part_destination, mapper_settings)
 
-        if model_part_origin.IsDistributed() or model_part_destination.IsDistributed():
-            raise Exception('{} does not support mapping with distributed ModelParts!'.format(self._ClassName()))
-
         if EmpireMortarMapper.mapper_lib:
             KM.Logger.PrintInfo("EmpireMortarMapper", "Mapper lib is already loaded")
         else:
