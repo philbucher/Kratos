@@ -83,7 +83,7 @@ class EmpireIO(CoSimulationIO):
         model_part_to_export = self.model[model_part_name]
 
         if model_part_to_export.IsDistributed():
-            gathered_model_part = self.aux_model.CreateModelPart(model_part_to_export.FullName()+"_gather_mesh_export")
+            gathered_model_part = self.aux_model.CreateModelPart((model_part_to_export.FullName()+"_gather_mesh_export").replace(".","-"))
             KratosMPI.GatherModelPartUtility(0, model_part_to_export, 0, gathered_model_part)
             model_part_for_api = gathered_model_part
         else:
@@ -94,7 +94,7 @@ class EmpireIO(CoSimulationIO):
 
         # cleanup, the gathered ModelPart is no longer needed
         if model_part_to_export.IsDistributed():
-            self.aux_model.DeleteModelPart(model_part_to_export.FullName()+"_gather_mesh_export")
+            self.aux_model.DeleteModelPart((model_part_to_export.FullName()+"_gather_mesh_export").replace(".","-"))
 
     def ImportData(self, data_config):
         data_type = data_config["type"]
