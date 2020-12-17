@@ -36,6 +36,8 @@
 #include "linear_solvers/iterative_solver.h"
 #include "includes/ublas_interface.h"
 #include "spaces/ublas_space.h"
+#include "utilities/builtin_timer.h"
+
 
 #include <amgcl/coarsening/rigid_body_modes.hpp>
 
@@ -399,7 +401,7 @@ public:
             mAMGCLParameters.put("precond.coarsening.aggr.block_size", mBlockSize);
         }
 
-        if(mVerbosity > 1)
+        if(mVerbosity > 2)
             write_json(std::cout, mAMGCLParameters);
 
         if(mVerbosity == 4) {
@@ -416,9 +418,13 @@ public:
                 //output of coordinates
                 std::ofstream coordsfile;
                 coordsfile.open ("coordinates.txt");
+                BuiltinTimer system_construction_time;
+
                 for(unsigned int i=0; i<mCoordinates.size(); i++) {
-                    coordsfile << mCoordinates[i][0] << " " << mCoordinates[i][1] << " " << mCoordinates[i][2] << std::endl;
+                    coordsfile << mCoordinates[i][0] << " " << mCoordinates[i][1] << " " << mCoordinates[i][2] << "\n";
                 }
+
+                std::cout << "Writing Coordinates took: " << system_construction_time.ElapsedSeconds() << std::endl;
                 coordsfile.close();
             }
 
@@ -445,6 +451,8 @@ public:
         } //please do not remove this parenthesis!
 
         if(mFallbackToGMRES && resid > mTolerance ) {
+            KRATOS_INFO_IF("AMGCL Linear Solver", mVerbosity > 0) << "Falling back to GMRES" << std::endl;
+
             mAMGCLParameters.put("solver.type", "gmres");
             mAMGCLParameters.put("solver.M",  mGMRESSize);
             AMGCLSolve(1, rA,rX,rB, iters, resid, mAMGCLParameters, mVerbosity, mUseGPGPU);
@@ -454,7 +462,7 @@ public:
 
         KRATOS_INFO_IF("AMGCL Linear Solver", mVerbosity > 1)
                     << "Iterations: " << iters << std::endl
-                    << "Error: " << resid << std::endl << std::endl;
+                    << "Error: " << resid << std::endl;
 
         // Setting values
         SetResidualNorm(resid);
@@ -597,7 +605,7 @@ public:
 
             if(old_ndof != -1)
                 mBlockSize = ndof;
-            
+
             int max_block_size = rModelPart.GetCommunicator().GetDataCommunicator().MaxAll(mBlockSize);
 
             if( old_ndof == -1) {
