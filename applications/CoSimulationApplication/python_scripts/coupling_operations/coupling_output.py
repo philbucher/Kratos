@@ -4,8 +4,47 @@ import KratosMultiphysics as KM
 # Importing the base class
 from KratosMultiphysics.CoSimulationApplication.base_classes.co_simulation_coupling_operation import CoSimulationCouplingOperation
 
+import json
+from pathlib import Path
+
 def Create(*args):
     return CouplingOutput(*args)
+
+class JsonOutput:
+    def __init__(self, model, settings):
+        self.model = model
+        self.model_part_name = settings["model_part_name"].GetString()
+        self.output_path = Path(settings["output_path"].GetString())
+        self.output_path.mkdir(exist_ok=True)
+
+        nodal_solution_step_data_variable_names = settings["nodal_solution_step_data_variables"].GetStringArray()
+        self.nodal_solution_step_data_variables = []
+
+        for variable_name in nodal_solution_step_data_variable_names:
+            variable = KM.KratosGlobals.GetVariable(variable_name)
+            variable_type = KM.KratosGlobals.GetVariableType(variable_name)
+            if variable_type == "Double":
+                self.nodal_solution_step_data_variables.append(variable)
+            elif variable_type == "Array":
+                self.nodal_solution_step_data_variables.append(KM.KratosGlobals.GetVariable(variable_name+"_X"))
+                self.nodal_solution_step_data_variables.append(KM.KratosGlobals.GetVariable(variable_name+"_Y"))
+                self.nodal_solution_step_data_variables.append(KM.KratosGlobals.GetVariable(variable_name+"_Z"))
+            else:
+                raise Exception("Wrong variable type!")
+
+    def Initialize(self):
+        self.model_part = self.model[self.model_part_name]
+
+    def PrintOutput(self, output_file_name):
+        output = {"variable_names" : [var.Name() for var in self.nodal_solution_step_data_variables]}
+        for node in self.model_part.Nodes:
+            output[node.Id] = [node.GetSolutionStepValue(var) for var in self.nodal_solution_step_data_variables]
+
+        file_path = self.output_path / (output_file_name + ".json")
+
+        with open(file_path, 'w') as out_file:
+            json.dump(output, out_file)
+
 
 class CouplingOutput(CoSimulationCouplingOperation):
     """This operation is used to output at different points in the coupling.
@@ -35,7 +74,18 @@ class CouplingOutput(CoSimulationCouplingOperation):
 
         self.step = 0 # this should come from self.process_info
         # TODO check if restarted. If not delete the folder => check self.process_info
-        self.output = KM.VtkOutput(self.model[model_part_name], self.settings["output_parameters"]) # currently hardcoded to vtk
+
+        output_format = self.settings["output_format"].GetString()
+        if output_format == "vtk":
+            self.output = KM.VtkOutput(self.model[model_part_name], self.settings["output_parameters"])
+        elif output_format == "json":
+            self.output = JsonOutput(self.model, self.settings["output_parameters"])
+        else:
+            raise Exception('Currently only "vtk" and "json" are supported!')
+
+    def Initialize(self):
+        if hasattr(self.output, "Initialize"):
+            self.output.Initialize()
 
     def InitializeSolutionStep(self):
         self.step += 1
