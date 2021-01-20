@@ -11,9 +11,8 @@ def Create(*args):
     return CouplingOutput(*args)
 
 class JsonOutput:
-    def __init__(self, model, settings):
-        self.model = model
-        self.model_part_name = settings["model_part_name"].GetString()
+    def __init__(self, model_part, settings):
+        self.model_part = model_part
         self.output_path = Path(settings["output_path"].GetString())
         self.output_path.mkdir(exist_ok=True)
 
@@ -32,11 +31,9 @@ class JsonOutput:
             else:
                 raise Exception("Wrong variable type!")
 
-    def Initialize(self):
-        self.model_part = self.model[self.model_part_name]
-
     def PrintOutput(self, output_file_name):
         output = {"variable_names" : [var.Name() for var in self.nodal_solution_step_data_variables]}
+
         for node in self.model_part.Nodes:
             output[node.Id] = [node.GetSolutionStepValue(var) for var in self.nodal_solution_step_data_variables]
 
@@ -57,8 +54,8 @@ class CouplingOutput(CoSimulationCouplingOperation):
         super().__init__(settings, process_info)
         self.model = solver_wrappers[self.settings["solver"].GetString()].model
         self.execution_point = self.settings["execution_point"].GetString()
-        model_part_name = self.settings["output_parameters"]["model_part_name"].GetString()
-        self.base_output_file_name = "{}_{}_{}_".format(self.settings["solver"].GetString(), model_part_name, self.execution_point)
+        self.model_part_name = self.settings["model_part_name"].GetString()
+        self.base_output_file_name = "{}_{}_{}_".format(self.settings["solver"].GetString(), self.model_part_name, self.execution_point)
 
         available_execution_points = [
             "initialize_solution_step",
@@ -75,17 +72,14 @@ class CouplingOutput(CoSimulationCouplingOperation):
         self.step = 0 # this should come from self.process_info
         # TODO check if restarted. If not delete the folder => check self.process_info
 
-        output_format = self.settings["output_format"].GetString()
-        if output_format == "vtk":
-            self.output = KM.VtkOutput(self.model[model_part_name], self.settings["output_parameters"])
-        elif output_format == "json":
-            self.output = JsonOutput(self.model, self.settings["output_parameters"])
+    def Initialize(self):
+        data_format = self.settings["data_format"].GetString()
+        if data_format == "vtk":
+            self.output = KM.VtkOutput(self.model[self.model_part_name], self.settings["output_parameters"])
+        elif data_format == "json":
+            self.output = JsonOutput(self.model[self.model_part_name], self.settings["output_parameters"])
         else:
             raise Exception('Currently only "vtk" and "json" are supported!')
-
-    def Initialize(self):
-        if hasattr(self.output, "Initialize"):
-            self.output.Initialize()
 
     def InitializeSolutionStep(self):
         self.step += 1
@@ -118,7 +112,8 @@ class CouplingOutput(CoSimulationCouplingOperation):
         this_defaults = KM.Parameters("""{
             "solver"            : "UNSPECIFIED",
             "execution_point"   : "UNSPECIFIED",
-            "output_format"     : "vtk",
+            "data_format"       : "vtk",
+            "model_part_name"   : "UNSPECIFIED",
             "output_parameters" : { }
         }""")
         this_defaults.AddMissingParameters(super()._GetDefaultParameters())
