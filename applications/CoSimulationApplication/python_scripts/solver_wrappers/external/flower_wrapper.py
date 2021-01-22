@@ -54,7 +54,7 @@ class FLOWerWrapper(CoSimulationSolverWrapper):
 
             self.ImportCouplingInterface(interface_config)
 
-            self.settings["solver_wrapper_settings"]["write_received_meshes"].GetBool():
+            if self.settings["solver_wrapper_settings"]["write_received_meshes"].GetBool():
                 KM.ModelPartIO(model_part_name, KM.IO.WRITE | KM.ModelPartIO.SKIP_TIMER).WriteModelPart(self.model[model_part_name])
 
 
