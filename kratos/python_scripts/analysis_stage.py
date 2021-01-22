@@ -140,6 +140,7 @@ class AnalysisStage(object):
     def PrintAnalysisStageProgressInformation(self):
         KratosMultiphysics.Logger.PrintInfo(self._GetSimulationName(), "STEP: ", self._GetSolver().GetComputingModelPart().ProcessInfo[KratosMultiphysics.STEP])
         KratosMultiphysics.Logger.PrintInfo(self._GetSimulationName(), "TIME: ", self.time)
+        KratosMultiphysics.Logger.Flush()
 
     def FinalizeSolutionStep(self):
         """This function performs all the required operations that should be executed
