@@ -14,7 +14,7 @@ class JsonOutput:
     def __init__(self, model_part, settings):
         self.model_part = model_part
         self.output_path = Path(settings["output_path"].GetString())
-        self.output_path.mkdir(exist_ok=True)
+        self.output_path.mkdir(parents=True, exist_ok=True)
 
         nodal_solution_step_data_variable_names = settings["nodal_solution_step_data_variables"].GetStringArray()
         self.nodal_solution_step_data_variables = []
