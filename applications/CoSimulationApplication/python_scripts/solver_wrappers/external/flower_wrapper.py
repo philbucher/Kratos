@@ -22,6 +22,7 @@ class FLOWerWrapper(CoSimulationSolverWrapper):
             "model_parts_recv" : { },
             "export_data"      : [ ],
             "import_data"      : [ ],
+            "write_received_meshes" : false,
             "interval"         : [0.0, "End"]
         }""")
 
@@ -52,6 +53,10 @@ class FLOWerWrapper(CoSimulationSolverWrapper):
             }
 
             self.ImportCouplingInterface(interface_config)
+
+            self.settings["solver_wrapper_settings"]["write_received_meshes"].GetBool():
+                KM.ModelPartIO(model_part_name, KM.IO.WRITE | KM.ModelPartIO.SKIP_TIMER).WriteModelPart(self.model[model_part_name])
+
 
     def SolveSolutionStep(self):
         if self.interval_utility.IsInInterval(self.current_time):
