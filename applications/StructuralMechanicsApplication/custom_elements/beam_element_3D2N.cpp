@@ -1018,14 +1018,13 @@ void BeamElement3D2N::CalculateMassMatrix(MatrixType& rMassMatrix,
     }
     rMassMatrix = ZeroMatrix(msElementSize, msElementSize);
 
-    bool use_consistent_mass_matrix = false;
+    const bool compute_lumped_mass_matrix = StructuralMechanicsElementUtilities::ComputeLumpedMassMatrix(GetProperties(), rCurrentProcessInfo);
 
-    if (GetProperties().Has(USE_CONSISTENT_MASS_MATRIX)) {
-        use_consistent_mass_matrix = GetProperties()[USE_CONSISTENT_MASS_MATRIX];
+    if (compute_lumped_mass_matrix)  {
+        CalculateLumpedMassMatrix(rMassMatrix, rCurrentProcessInfo);
+    } else {
+        CalculateConsistentMassMatrix(rMassMatrix, rCurrentProcessInfo);
     }
-
-    if (use_consistent_mass_matrix) CalculateConsistentMassMatrix(rMassMatrix, rCurrentProcessInfo);
-    else CalculateLumpedMassMatrix(rMassMatrix, rCurrentProcessInfo);
 
     KRATOS_CATCH("")
 }
