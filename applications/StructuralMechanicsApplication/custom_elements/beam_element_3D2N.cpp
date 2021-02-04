@@ -95,12 +95,11 @@ void BeamElement3D2N::GetDofList(DofsVectorType& rElementalDofList,
 
 void BeamElement3D2N::Initialize()
 {
-
     KRATOS_TRY;
     KRATOS_CATCH("")
 }
 
-void BeamElement3D2N::GetSecondDerivativesVector(Vector& rValues, int Step)
+void BeamElement3D2N::GetSecondDerivativesVector(Vector& rValues, int Step) const
 {
 
     KRATOS_TRY
@@ -137,7 +136,7 @@ void BeamElement3D2N::InitializeNonLinearIteration(ProcessInfo& rCurrentProcessI
     KRATOS_CATCH("")
 }
 
-void BeamElement3D2N::GetFirstDerivativesVector(Vector& rValues, int Step)
+void BeamElement3D2N::GetFirstDerivativesVector(Vector& rValues, int Step) const
 {
 
     KRATOS_TRY
@@ -163,7 +162,7 @@ void BeamElement3D2N::GetFirstDerivativesVector(Vector& rValues, int Step)
     KRATOS_CATCH("")
 }
 
-void BeamElement3D2N::GetValuesVector(Vector& rValues, int Step)
+void BeamElement3D2N::GetValuesVector(Vector& rValues, int Step) const
 {
     KRATOS_TRY
     if (rValues.size() != msElementSize) {
@@ -514,15 +513,14 @@ Vector BeamElement3D2N::LocalDeformations() const
     const double L = StructuralMechanicsElementUtilities::CalculateReferenceLength3D2N(*this);
     const double l = StructuralMechanicsElementUtilities::CalculateCurrentLength3D2N(*this);
 
-    local_deformations[0] = l-L;
+    //local_deformations[0] = l-L;
+    local_deformations[0] = (std::pow(l,2.0)-std::pow(L,2.0)) / (l+L);  //Crisfield
 
     Matrix reference_co_rot_matrix = CalculateInitialLocalCS();
     Matrix current_co_rot_matrix = CoRotatingCS();
 
 
     Matrix local_rot_node_1 = prod(mGlobalRotationNode1,reference_co_rot_matrix);
-
-
     local_rot_node_1 = prod(trans(current_co_rot_matrix),local_rot_node_1);
 
     Matrix local_rot_node_2 = prod(mGlobalRotationNode2,reference_co_rot_matrix);
@@ -547,7 +545,9 @@ Matrix BeamElement3D2N::LogRotationMatrix(const Matrix& rRotationMatrix) const
 {
     const double numerical_limit = std::numeric_limits<double>::epsilon();
     const double trace = rRotationMatrix(0,0)+rRotationMatrix(1,1)+rRotationMatrix(2,2);
-    const double phi = std::acos((trace - 1.0)/2.0);
+    double phi = std::acos((trace - 1.0)/2.0);
+
+    if (std::abs(std::abs(rRotationMatrix(0,0))-1.0) < numerical_limit) phi = std::asin(rRotationMatrix(0,1));
 
     Matrix log_matrix = ZeroMatrix(msDimension);
 
@@ -970,8 +970,25 @@ void BeamElement3D2N::CalculateConsistentMassMatrix(
     rMassMatrix(11,11) = 0.0095238095238095455*A*std::pow(L, 3)*rho;
 
 
+
+
+    Matrix reference_co_rot_matrix = CalculateInitialLocalCS();
+    Matrix local_rot_node_1 = prod(mGlobalRotationNode1,reference_co_rot_matrix);
+    Matrix local_rot_node_2 = prod(mGlobalRotationNode2,reference_co_rot_matrix);
+
+    Matrix current_co_rotating_rotation_matrix = ZeroMatrix(msElementSize);
+
+    project(current_co_rotating_rotation_matrix, range(0,3),range(0,3)) += local_rot_node_1;
+    project(current_co_rotating_rotation_matrix, range(3,6),range(3,6)) += local_rot_node_1;
+    project(current_co_rotating_rotation_matrix, range(6,9),range(6,9)) += local_rot_node_2;
+    project(current_co_rotating_rotation_matrix, range(9,12),range(9,12)) += local_rot_node_2;
+
+
     // rotate the consistent mass matrix
-    Matrix current_co_rotating_rotation_matrix = EMatrix();
+    /* Matrix current_co_rotating_rotation_matrix = EMatrix(); */
+
+
+
     rMassMatrix = prod(rMassMatrix,trans(current_co_rotating_rotation_matrix));
     rMassMatrix = prod(current_co_rotating_rotation_matrix,rMassMatrix);
     KRATOS_CATCH("")
@@ -1018,13 +1035,14 @@ void BeamElement3D2N::CalculateMassMatrix(MatrixType& rMassMatrix,
     }
     rMassMatrix = ZeroMatrix(msElementSize, msElementSize);
 
-    const bool compute_lumped_mass_matrix = StructuralMechanicsElementUtilities::ComputeLumpedMassMatrix(GetProperties(), rCurrentProcessInfo);
+    bool use_consistent_mass_matrix = false;
 
-    if (compute_lumped_mass_matrix)  {
-        CalculateLumpedMassMatrix(rMassMatrix, rCurrentProcessInfo);
-    } else {
-        CalculateConsistentMassMatrix(rMassMatrix, rCurrentProcessInfo);
+    if (GetProperties().Has(USE_CONSISTENT_MASS_MATRIX)) {
+        use_consistent_mass_matrix = GetProperties()[USE_CONSISTENT_MASS_MATRIX];
     }
+
+    if (use_consistent_mass_matrix) CalculateConsistentMassMatrix(rMassMatrix, rCurrentProcessInfo);
+    else CalculateLumpedMassMatrix(rMassMatrix, rCurrentProcessInfo);
 
     KRATOS_CATCH("")
 }
@@ -1052,7 +1070,7 @@ BoundedVector<double, BeamElement3D2N::msElementSize> BeamElement3D2N::Calculate
         ZeroVector(msElementSize);
 
     const double A = GetProperties()[CROSS_AREA];
-    const double l = StructuralMechanicsElementUtilities::CalculateCurrentLength3D2N(*this);
+    const double l = StructuralMechanicsElementUtilities::CalculateReferenceLength3D2N(*this);
     const double rho = StructuralMechanicsElementUtilities::GetDensityForMassMatrixComputation(*this);
 
     // calculating equivalent line load
@@ -1071,9 +1089,9 @@ BoundedVector<double, BeamElement3D2N::msElementSize> BeamElement3D2N::Calculate
         }
     }
 
-    // adding the nodal moments
+    /* // adding the nodal moments
     CalculateAndAddWorkEquivalentNodalForcesLineLoad(equivalent_line_load,
-            body_forces_global, l);
+            body_forces_global, l); */
 
     // return the total ForceVector
     return body_forces_global;
@@ -1082,7 +1100,7 @@ BoundedVector<double, BeamElement3D2N::msElementSize> BeamElement3D2N::Calculate
 
 void BeamElement3D2N::AddExplicitContribution(
     const VectorType& rRHSVector, const Variable<VectorType>& rRHSVariable,
-    Variable<array_1d<double, 3>>& rDestinationVariable,
+    const Variable<array_1d<double, 3>>& rDestinationVariable,
     const ProcessInfo& rCurrentProcessInfo
 )
 {

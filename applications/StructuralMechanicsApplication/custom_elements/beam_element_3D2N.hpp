@@ -30,6 +30,7 @@ namespace Kratos
  * @class BeamElement3D2N
  *
  * @brief This is a 3D-2node beam element with 3 translational dofs and 3 rotational dof per node
+ *       from "Co-rotational beam elements in instability problems - Jean-Marc Battini"
  *
  * @author Klaus B Sautter
  */
@@ -146,7 +147,7 @@ public:
     void CalculateMassMatrix(MatrixType& rMassMatrix, ProcessInfo& rCurrentProcessInfo) override;
     void CalculateDampingMatrix(MatrixType& rDampingMatrix, ProcessInfo& rCurrentProcessInfo) override;
     void AddExplicitContribution(const VectorType& rRHSVector, const Variable<VectorType>& rRHSVariable,
-        Variable<array_1d<double, 3>>& rDestinationVariable,const ProcessInfo& rCurrentProcessInfo) override;
+        const Variable<array_1d<double, 3>>& rDestinationVariable,const ProcessInfo& rCurrentProcessInfo) override;
 
 
     void GetValueOnIntegrationPoints(
@@ -196,15 +197,15 @@ public:
 
     void GetValuesVector(
         Vector& rValues,
-        int Step = 0) override;
+        int Step = 0) const override;
 
     void GetSecondDerivativesVector(
         Vector& rValues,
-        int Step = 0) override;
+        int Step = 0) const override;
 
     void GetFirstDerivativesVector(
         Vector& rValues,
-        int Step = 0) override;
+        int Step = 0) const override;
 
 
     int Check(const ProcessInfo& rCurrentProcessInfo) override;
