@@ -611,38 +611,6 @@ public:
     }
 
     /**
-     * @brief Function to clean up "element" scratch space after each element is built.
-     * @param rElement The element to compute
-     */
-    virtual void CleanMemory(Element& rElement)
-    {
-        this->CleanMemory(Element::Pointer(&rElement)); // TODO remove this after the transition period and uncomment the following
-        // rElement.CleanMemory();
-    }
-    KRATOS_DEPRECATED_MESSAGE("This is legacy version, please use the other overload of this function")
-    virtual void CleanMemory(Element::Pointer rCurrentElement)
-    {
-        rCurrentElement->CleanMemory();
-    }
-
-    /**
-     * @brief Function to clean up "condition" scratch space after each condition is built.
-     * @param rCondition The condition to compute
-     */
-    virtual void CleanMemory(Condition& rCondition)
-    {
-        KRATOS_START_IGNORING_DEPRECATED_FUNCTION_WARNING
-        this->CleanMemory(Condition::Pointer(&rCondition)); // TODO remove this after the transition period and uncomment the following
-        KRATOS_STOP_IGNORING_DEPRECATED_FUNCTION_WARNING
-        // rCondition.CleanMemory();
-    }
-    KRATOS_DEPRECATED_MESSAGE("This is legacy version, please use the other overload of this function")
-    virtual void CleanMemory(Condition::Pointer rCurrentCondition)
-    {
-        rCurrentCondition->CleanMemory();
-    }
-
-    /**
      * @brief Liberate internal storage.
      * @warning Must be implemented in the derived classes
      */
@@ -670,21 +638,24 @@ public:
         #pragma omp parallel for
         for(int i=0; i<static_cast<int>(rModelPart.NumberOfElements()); i++) {
             auto it_elem = rModelPart.ElementsBegin() + i;
-            it_elem->Check(r_current_process_info);
+            const auto& r_elem = *it_elem;
+            r_elem.Check(r_current_process_info);
         }
 
         // Checks for all of the conditions
         #pragma omp parallel for
         for(int i=0; i<static_cast<int>(rModelPart.NumberOfConditions()); i++) {
             auto it_cond = rModelPart.ConditionsBegin() + i;
-            it_cond->Check(r_current_process_info);
+            const auto& r_cond = *it_cond;
+            r_cond.Check(r_current_process_info);
         }
 
         // Checks for all of the constraints
         #pragma omp parallel for
         for(int i=0; i<static_cast<int>(rModelPart.NumberOfMasterSlaveConstraints()); i++) {
             auto it_constraint = rModelPart.MasterSlaveConstraintsBegin() + i;
-            it_constraint->Check(r_current_process_info);
+            const auto& r_constraint = *it_constraint;
+            r_constraint.Check(r_current_process_info);
         }
 
         return 0;
@@ -716,29 +687,7 @@ public:
         const ProcessInfo& rCurrentProcessInfo
         )
     {
-        KRATOS_START_IGNORING_DEPRECATED_FUNCTION_WARNING
-        this->CalculateSystemContributions(
-            Element::Pointer(&rElement),
-            LHS_Contribution,
-            RHS_Contribution,
-            rEquationIdVector,
-            const_cast<ProcessInfo&>(rCurrentProcessInfo)
-        ); // TODO remove this after the transition period and uncomment the following
-        KRATOS_STOP_IGNORING_DEPRECATED_FUNCTION_WARNING
-        // rElement.CalculateLocalSystem(LHS_Contribution, RHS_Contribution, rCurrentProcessInfo);
-    }
-    KRATOS_DEPRECATED_MESSAGE("This is legacy version, please use the other overload of this function")
-    virtual void CalculateSystemContributions(
-        Element::Pointer pCurrentElement,
-        LocalSystemMatrixType& LHS_Contribution,
-        LocalSystemVectorType& RHS_Contribution,
-        Element::EquationIdVectorType& EquationId,
-        ProcessInfo& rCurrentProcessInfo
-        )
-    {
-        KRATOS_START_IGNORING_DEPRECATED_FUNCTION_WARNING
-        pCurrentElement->CalculateLocalSystem(LHS_Contribution, RHS_Contribution, rCurrentProcessInfo);
-        KRATOS_STOP_IGNORING_DEPRECATED_FUNCTION_WARNING
+        rElement.CalculateLocalSystem(LHS_Contribution, RHS_Contribution, rCurrentProcessInfo);
     }
 
     /**
@@ -757,29 +706,7 @@ public:
         const ProcessInfo& rCurrentProcessInfo
         )
     {
-        KRATOS_START_IGNORING_DEPRECATED_FUNCTION_WARNING
-        this->Condition_CalculateSystemContributions(
-            Condition::Pointer(&rCondition),
-            LHS_Contribution,
-            RHS_Contribution,
-            rEquationIdVector,
-            const_cast<ProcessInfo&>(rCurrentProcessInfo)
-        ); // TODO remove this after the transition period and uncomment the following
-        KRATOS_STOP_IGNORING_DEPRECATED_FUNCTION_WARNING
-        // rCondition.CalculateLocalSystem(LHS_Contribution, RHS_Contribution, rCurrentProcessInfo);
-    }
-    KRATOS_DEPRECATED_MESSAGE("This is legacy version, please use the other overload of this function")
-    virtual void Condition_CalculateSystemContributions(
-        Condition::Pointer pCurrentCondition,
-        LocalSystemMatrixType& LHS_Contribution,
-        LocalSystemVectorType& RHS_Contribution,
-        Element::EquationIdVectorType& EquationId,
-        ProcessInfo& rCurrentProcessInfo
-        )
-    {
-        KRATOS_START_IGNORING_DEPRECATED_FUNCTION_WARNING
-        pCurrentCondition->CalculateLocalSystem(LHS_Contribution, RHS_Contribution, rCurrentProcessInfo);
-        KRATOS_STOP_IGNORING_DEPRECATED_FUNCTION_WARNING
+        rCondition.CalculateLocalSystem(LHS_Contribution, RHS_Contribution, rCurrentProcessInfo);
     }
 
     /**
@@ -796,27 +723,7 @@ public:
         const ProcessInfo& rCurrentProcessInfo
         )
     {
-        KRATOS_START_IGNORING_DEPRECATED_FUNCTION_WARNING
-        this->Calculate_RHS_Contribution(
-            Element::Pointer(&rElement),
-            RHS_Contribution,
-            rEquationIdVector,
-            const_cast<ProcessInfo&>(rCurrentProcessInfo)
-        ); // TODO remove this after the transition period and uncomment the following
-        KRATOS_STOP_IGNORING_DEPRECATED_FUNCTION_WARNING
-        // rElement.CalculateRightHandSide(RHS_Contribution, rCurrentProcessInfo);
-    }
-    KRATOS_DEPRECATED_MESSAGE("This is legacy version, please use the other overload of this function")
-    virtual void Calculate_RHS_Contribution(
-        Element::Pointer pCurrentElement,
-        LocalSystemVectorType& RHS_Contribution,
-        Element::EquationIdVectorType& EquationId,
-        ProcessInfo& rCurrentProcessInfo
-        )
-    {
-        KRATOS_START_IGNORING_DEPRECATED_FUNCTION_WARNING
-        pCurrentElement->CalculateRightHandSide(RHS_Contribution, rCurrentProcessInfo);
-        KRATOS_STOP_IGNORING_DEPRECATED_FUNCTION_WARNING
+        rElement.CalculateRightHandSide(RHS_Contribution, rCurrentProcessInfo);
     }
 
     /**
@@ -833,27 +740,7 @@ public:
         const ProcessInfo& rCurrentProcessInfo
         )
     {
-        KRATOS_START_IGNORING_DEPRECATED_FUNCTION_WARNING
-        this->Condition_Calculate_RHS_Contribution(
-            Condition::Pointer(&rCondition),
-            RHS_Contribution,
-            rEquationIdVector,
-            const_cast<ProcessInfo&>(rCurrentProcessInfo)
-        ); // TODO remove this after the transition period and uncomment the following
-        KRATOS_STOP_IGNORING_DEPRECATED_FUNCTION_WARNING
-        // rCondition.CalculateRightHandSide(RHS_Contribution, rCurrentProcessInfo);
-    }
-    KRATOS_DEPRECATED_MESSAGE("This is legacy version, please use the other overload of this function")
-    virtual void Condition_Calculate_RHS_Contribution(
-        Condition::Pointer pCurrentCondition,
-        LocalSystemVectorType& RHS_Contribution,
-        Element::EquationIdVectorType& EquationId,
-        ProcessInfo& rCurrentProcessInfo
-        )
-    {
-        KRATOS_START_IGNORING_DEPRECATED_FUNCTION_WARNING
-        pCurrentCondition->CalculateRightHandSide(RHS_Contribution, rCurrentProcessInfo);
-        KRATOS_STOP_IGNORING_DEPRECATED_FUNCTION_WARNING
+        rCondition.CalculateRightHandSide(RHS_Contribution, rCurrentProcessInfo);
     }
 
     /**
@@ -870,27 +757,7 @@ public:
         const ProcessInfo& rCurrentProcessInfo
         )
     {
-        KRATOS_START_IGNORING_DEPRECATED_FUNCTION_WARNING
-        this->Calculate_LHS_Contribution(
-            Element::Pointer(&rElement),
-            LHS_Contribution,
-            rEquationIdVector,
-            const_cast<ProcessInfo&>(rCurrentProcessInfo)
-        ); // TODO remove this after the transition period and uncomment the following
-        KRATOS_STOP_IGNORING_DEPRECATED_FUNCTION_WARNING
-        // rElement.CalculateLeftHandSide(LHS_Contribution, rCurrentProcessInfo);
-    }
-    KRATOS_DEPRECATED_MESSAGE("This is legacy version, please use the other overload of this function")
-    virtual void Calculate_LHS_Contribution(
-        Element::Pointer pCurrentElement,
-        LocalSystemMatrixType& LHS_Contribution,
-        Element::EquationIdVectorType& EquationId,
-        ProcessInfo& rCurrentProcessInfo
-        )
-    {
-        KRATOS_START_IGNORING_DEPRECATED_FUNCTION_WARNING
-        pCurrentElement->CalculateLeftHandSide(LHS_Contribution, rCurrentProcessInfo);
-        KRATOS_STOP_IGNORING_DEPRECATED_FUNCTION_WARNING
+        rElement.CalculateLeftHandSide(LHS_Contribution, rCurrentProcessInfo);
     }
 
     /**
@@ -907,27 +774,7 @@ public:
         const ProcessInfo& rCurrentProcessInfo
         )
     {
-        KRATOS_START_IGNORING_DEPRECATED_FUNCTION_WARNING
-        this->Condition_Calculate_LHS_Contribution(
-            Condition::Pointer(&rCondition),
-            LHS_Contribution,
-            rEquationIdVector,
-            const_cast<ProcessInfo&>(rCurrentProcessInfo)
-        ); // TODO remove this after the transition period and uncomment the following
-        KRATOS_STOP_IGNORING_DEPRECATED_FUNCTION_WARNING
-        // rCondition.CalculateLeftHandSide(LHS_Contribution, rCurrentProcessInfo);
-    }
-    KRATOS_DEPRECATED_MESSAGE("This is legacy version, please use the other overload of this function")
-    virtual void Condition_Calculate_LHS_Contribution(
-        Condition::Pointer pCurrentCondition,
-        LocalSystemMatrixType& LHS_Contribution,
-        Element::EquationIdVectorType& EquationId,
-        ProcessInfo& rCurrentProcessInfo
-        )
-    {
-        KRATOS_START_IGNORING_DEPRECATED_FUNCTION_WARNING
-        pCurrentCondition->CalculateLeftHandSide(LHS_Contribution, rCurrentProcessInfo);
-        KRATOS_STOP_IGNORING_DEPRECATED_FUNCTION_WARNING
+        rCondition.CalculateLeftHandSide(LHS_Contribution, rCurrentProcessInfo);
     }
 
     /**
@@ -944,17 +791,6 @@ public:
     {
         rElement.EquationIdVector(rEquationId, rCurrentProcessInfo);
     }
-    KRATOS_DEPRECATED_MESSAGE("This is legacy version, please use the other overload of this function")
-    virtual void EquationId(
-        Element::Pointer pCurrentElement,
-        Element::EquationIdVectorType& EquationId,
-        ProcessInfo& rCurrentProcessInfo
-        )
-    {
-        KRATOS_START_IGNORING_DEPRECATED_FUNCTION_WARNING
-        (pCurrentElement)->EquationIdVector(EquationId, rCurrentProcessInfo);
-        KRATOS_STOP_IGNORING_DEPRECATED_FUNCTION_WARNING
-    }
 
     /**
      * @brief Functions totally analogous to the precedent but applied to the "condition" objects
@@ -969,17 +805,6 @@ public:
         )
     {
         rCondition.EquationIdVector(rEquationId, rCurrentProcessInfo);
-    }
-    KRATOS_DEPRECATED_MESSAGE("This is legacy version, please use the other overload of this function")
-    virtual void Condition_EquationId(
-        Condition::Pointer pCurrentCondition,
-        Element::EquationIdVectorType& EquationId,
-        ProcessInfo& rCurrentProcessInfo
-        )
-    {
-        KRATOS_START_IGNORING_DEPRECATED_FUNCTION_WARNING
-        (pCurrentCondition)->EquationIdVector(EquationId, rCurrentProcessInfo);
-        KRATOS_STOP_IGNORING_DEPRECATED_FUNCTION_WARNING
     }
 
     /**
@@ -996,17 +821,6 @@ public:
     {
         rElement.GetDofList(rDofList, rCurrentProcessInfo);
     }
-    KRATOS_DEPRECATED_MESSAGE("This is legacy version, please use the other overload of this function")
-    virtual void GetElementalDofList(
-        Element::Pointer pCurrentElement,
-        Element::DofsVectorType& ElementalDofList,
-        ProcessInfo& rCurrentProcessInfo
-        )
-    {
-        KRATOS_START_IGNORING_DEPRECATED_FUNCTION_WARNING
-        pCurrentElement->GetDofList(ElementalDofList, rCurrentProcessInfo);
-        KRATOS_STOP_IGNORING_DEPRECATED_FUNCTION_WARNING
-    }
 
     /**
      * @brief Function that returns the list of Degrees of freedom to be assembled in the system for a Given condition
@@ -1021,17 +835,6 @@ public:
         )
     {
         rCondition.GetDofList(rDofList, rCurrentProcessInfo);
-    }
-    KRATOS_DEPRECATED_MESSAGE("This is legacy version, please use the other overload of this function")
-    virtual void GetConditionDofList(
-        Condition::Pointer pCurrentCondition,
-        Element::DofsVectorType& ConditionDofList,
-        ProcessInfo& rCurrentProcessInfo
-        )
-    {
-        KRATOS_START_IGNORING_DEPRECATED_FUNCTION_WARNING
-        pCurrentCondition->GetDofList(ConditionDofList, rCurrentProcessInfo);
-        KRATOS_STOP_IGNORING_DEPRECATED_FUNCTION_WARNING
     }
 
     /**
