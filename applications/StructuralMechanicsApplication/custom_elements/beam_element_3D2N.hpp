@@ -95,13 +95,13 @@ public:
 
     void EquationIdVector(
         EquationIdVectorType& rResult,
-        ProcessInfo& rCurrentProcessInfo) override;
+        const ProcessInfo& rCurrentProcessInfo) const override;
 
     void GetDofList(
         DofsVectorType& rElementalDofList,
-        ProcessInfo& rCurrentProcessInfo) override;
+        const ProcessInfo& rCurrentProcessInfo) const override;
 
-    void Initialize() override;
+    void Initialize(const ProcessInfo& rCurrentProcessInfo) override;
 
     /**
      * @brief This function calculates the elastic part of the total stiffness matrix
@@ -144,16 +144,10 @@ public:
 
     void CalculateConsistentMassMatrix(MatrixType& rMassMatrix, const ProcessInfo& rCurrentProcessInfo) const;
     void CalculateLumpedMassMatrix(MatrixType& rMassMatrix, const ProcessInfo& rCurrentProcessInfo) const;
-    void CalculateMassMatrix(MatrixType& rMassMatrix, ProcessInfo& rCurrentProcessInfo) override;
-    void CalculateDampingMatrix(MatrixType& rDampingMatrix, ProcessInfo& rCurrentProcessInfo) override;
+    void CalculateMassMatrix(MatrixType& rMassMatrix, const ProcessInfo& rCurrentProcessInfo) override;
+    void CalculateDampingMatrix(MatrixType& rDampingMatrix, const ProcessInfo& rCurrentProcessInfo) override;
     void AddExplicitContribution(const VectorType& rRHSVector, const Variable<VectorType>& rRHSVariable,
         const Variable<array_1d<double, 3>>& rDestinationVariable,const ProcessInfo& rCurrentProcessInfo) override;
-
-
-    void GetValueOnIntegrationPoints(
-    const Variable<array_1d<double, 3>>& rVariable,
-    std::vector<array_1d<double, 3>>& rOutput,
-    const ProcessInfo& rCurrentProcessInfo) override;
 
     void CalculateOnIntegrationPoints(
     const Variable<array_1d<double, 3>>& rVariable,
@@ -172,28 +166,28 @@ public:
     void CalculateLocalSystem(
         MatrixType& rLeftHandSideMatrix,
         VectorType& rRightHandSideVector,
-        ProcessInfo& rCurrentProcessInfo) override;
+        const ProcessInfo& rCurrentProcessInfo) override;
 
     void ConstCalculateLocalSystem(
         MatrixType& rLeftHandSideMatrix,
         VectorType& rRightHandSideVector,
-        ProcessInfo& rCurrentProcessInfo) const;
+        const ProcessInfo& rCurrentProcessInfo) const;
 
     void CalculateRightHandSide(
         VectorType& rRightHandSideVector,
-        ProcessInfo& rCurrentProcessInfo) override;
+        const ProcessInfo& rCurrentProcessInfo) override;
 
     void CalculateLeftHandSide(
         MatrixType& rLeftHandSideMatrix,
-        ProcessInfo& rCurrentProcessInfo) override;
+        const ProcessInfo& rCurrentProcessInfo) override;
 
     void ConstCalculateRightHandSide(
         VectorType& rRightHandSideVector,
-        ProcessInfo& rCurrentProcessInfo) const;
+        const ProcessInfo& rCurrentProcessInfo) const;
 
     void ConstCalculateLeftHandSide(
         MatrixType& rLeftHandSideMatrix,
-        ProcessInfo& rCurrentProcessInfo) const;
+        const ProcessInfo& rCurrentProcessInfo) const;
 
     void GetValuesVector(
         Vector& rValues,
@@ -208,7 +202,7 @@ public:
         int Step = 0) const override;
 
 
-    int Check(const ProcessInfo& rCurrentProcessInfo) override;
+    int Check(const ProcessInfo& rCurrentProcessInfo) const override;
 
     /**
      * @brief This function calculates shear modulus from user input values
@@ -219,7 +213,7 @@ public:
 
     Vector GetIncrementDeformation() const;
 
-    void InitializeNonLinearIteration(ProcessInfo& rCurrentProcessInfo) override;
+    void InitializeNonLinearIteration(const ProcessInfo& rCurrentProcessInfo) override;
 
 
 private:
