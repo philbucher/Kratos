@@ -18,7 +18,6 @@
 
 // Project includes
 #include "includes/model_part_io.h"
-#include "includes/kratos_filesystem.h"
 #include "input_output/logger.h"
 #include "utilities/quaternion.h"
 #include "utilities/openmp_utils.h"
