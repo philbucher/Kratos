@@ -14,6 +14,7 @@
 #include "custom_utilities/shellt3_corotational_coordinate_transformation.hpp"
 
 #include "custom_utilities/shell_utilities.h"
+#include "custom_utilities/structural_mechanics_element_utilities.h"
 
 #include <string>
 #include <iomanip>
@@ -211,10 +212,10 @@ void ShellThickElement3D3N::CalculateMassMatrix(MatrixType& rMassMatrix, const P
     av_mass_per_unit_area /= double(num_gps);
 
     // Flag for consistent or lumped mass matrix
-    bool bconsistent_matrix = false;
+    const bool compute_lumped_mass_matrix = StructuralMechanicsElementUtilities::ComputeLumpedMassMatrix(GetProperties(), rCurrentProcessInfo);
 
     // Consistent mass matrix
-    if (bconsistent_matrix) {
+    if (!compute_lumped_mass_matrix) {
         // General matrix form as per Felippa plane stress CST eqn 31.27:
         // http://kis.tu.kielce.pl/mo/COLORADO_FEM/colorado/IFEM.Ch31.pdf
         //
