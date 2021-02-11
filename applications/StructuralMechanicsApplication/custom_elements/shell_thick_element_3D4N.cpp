@@ -12,6 +12,7 @@
 #include "shell_thick_element_3D4N.hpp"
 #include "custom_utilities/shellq4_corotational_coordinate_transformation.hpp"
 #include "custom_utilities/shell_utilities.h"
+#include "custom_utilities/structural_mechanics_element_utilities.h"
 
 #include <string>
 #include <iomanip>
@@ -462,30 +463,93 @@ void ShellThickElement3D4N::CalculateMassMatrix(MatrixType& rMassMatrix, const P
     ShellQ4_LocalCoordinateSystem referenceCoordinateSystem(
         mpCoordinateTransformation->CreateReferenceCoordinateSystem());
 
-    // lumped area
 
-    double lump_area = referenceCoordinateSystem.Area() / 4.0;
+    // Flag for consistent or lumped mass matrix
+    const bool compute_lumped_mass_matrix = StructuralMechanicsElementUtilities::ComputeLumpedMassMatrix(GetProperties(), rCurrentProcessInfo);
 
     // Calculate avarage mass per unit area
     double av_mass_per_unit_area = 0.0;
-    for (SizeType i = 0; i < 4; i++) {
-        av_mass_per_unit_area += mSections[i]->CalculateMassPerUnitArea(GetProperties());
-    }
-    av_mass_per_unit_area /= 4.0;
 
-    // Gauss Loop
+    if (compute_lumped_mass_matrix) {
+        // lumped area
+        double lump_area = referenceCoordinateSystem.Area() / 4.0;
 
-    for (SizeType i = 0; i < 4; i++) {
-        SizeType index = i * 6;
+        for (SizeType i = 0; i < 4; i++) {
+            av_mass_per_unit_area += mSections[i]->CalculateMassPerUnitArea(GetProperties());
+        }
+        av_mass_per_unit_area /= 4.0;
 
-        double nodal_mass = av_mass_per_unit_area * lump_area;
+        // Gauss Loop
 
-        // translational mass
-        rMassMatrix(index, index)            = nodal_mass;
-        rMassMatrix(index + 1, index + 1)    = nodal_mass;
-        rMassMatrix(index + 2, index + 2)    = nodal_mass;
+        for (SizeType i = 0; i < 4; i++) {
+            SizeType index = i * 6;
 
-        // rotational mass - neglected for the moment...
+            double nodal_mass = av_mass_per_unit_area * lump_area;
+
+            // translational mass
+            rMassMatrix(index, index)            = nodal_mass;
+            rMassMatrix(index + 1, index + 1)    = nodal_mass;
+            rMassMatrix(index + 2, index + 2)    = nodal_mass;
+
+            // rotational mass - neglected for the moment...
+        }
+    } else {
+// Get shape function values and setup jacobian
+        const GeometryType& geom = GetGeometry();
+        const Matrix& shapeFunctions = geom.ShapeFunctionsValues();
+        JacobianOperator jacOp;
+
+        // Get integration points
+        const GeometryType::IntegrationPointsArrayType& integration_points =
+            GetGeometry().IntegrationPoints(mIntegrationMethod);
+
+        // Setup matrix of shape functions
+        Matrix N = Matrix(6, 24, 0.0);
+
+        // Other variables
+        double dA = 0.0;
+        double thickness = 0.0;
+        double drilling_factor = 1.0;    // sqrt of the actual factor applied,
+        // 1.0 is no reduction.
+
+        // Gauss loop
+        for (SizeType gauss_point = 0; gauss_point < 4; gauss_point++) {
+            // Calculate average mass per unit area and thickness at the
+            // current GP
+            av_mass_per_unit_area =
+                mSections[gauss_point]->CalculateMassPerUnitArea(GetProperties());
+            thickness = mSections[gauss_point]->GetThickness(GetProperties());
+
+            // Calc jacobian and weighted dA at current GP
+            jacOp.Calculate(referenceCoordinateSystem,
+                            geom.ShapeFunctionLocalGradient(gauss_point));
+            dA = integration_points[gauss_point].Weight() *
+                 jacOp.Determinant();
+
+            // Assemble shape function matrix over nodes
+            for (SizeType node = 0; node < 4; node++) {
+                // translational entries - dofs 1, 2, 3
+                for (SizeType dof = 0; dof < 3; dof++) {
+                    N(dof, 6 * node + dof) =
+                        shapeFunctions(gauss_point, node);
+                }
+
+                // rotational inertia entries - dofs 4, 5
+                for (SizeType dof = 0; dof < 2; dof++) {
+                    N(dof + 3, 6 * node + dof + 3) =
+                        thickness / std::sqrt(12.0) *
+                        shapeFunctions(gauss_point, node);
+                }
+
+                // drilling rotational entry - artifical factor included
+                N(5, 6 * node + 5) = thickness / std::sqrt(12.0) *
+                                     shapeFunctions(gauss_point, node) /
+                                     drilling_factor;
+            }
+
+            // Add contribution to total mass matrix
+            rMassMatrix += prod(trans(N), N)*dA*av_mass_per_unit_area;
+        }
     }
 }
 
