@@ -11,7 +11,6 @@
 //
 
 #include "shell_thick_element_3D3N.hpp"
-#include "custom_utilities/shellt3_corotational_coordinate_transformation.hpp"
 
 #include "custom_utilities/shell_utilities.h"
 #include "custom_utilities/structural_mechanics_element_utilities.h"
@@ -76,8 +75,9 @@ namespace Kratos
 //
 // =========================================================================
 
-ShellThickElement3D3N::CalculationData::CalculationData
-(const CoordinateTransformationBasePointerType& pCoordinateTransformation,
+template <ShellKinematics TKinematics>
+ShellThickElement3D3N<TKinematics>::CalculationData::CalculationData
+(const CoordinateTransformationPointerType& pCoordinateTransformation,
  const ProcessInfo& rCurrentProcessInfo)
     : LCS0(pCoordinateTransformation->CreateReferenceCoordinateSystem())
     , LCS(pCoordinateTransformation->CreateLocalCoordinateSystem())
@@ -92,185 +92,38 @@ ShellThickElement3D3N::CalculationData::CalculationData
 //
 // =========================================================================
 
-ShellThickElement3D3N::ShellThickElement3D3N(IndexType NewId,
+template <ShellKinematics TKinematics>
+ShellThickElement3D3N<TKinematics>::ShellThickElement3D3N(IndexType NewId,
+        GeometryType::Pointer pGeometry)
+    : BaseType(NewId, pGeometry)
+{
+}
+
+template <ShellKinematics TKinematics>
+ShellThickElement3D3N<TKinematics>::ShellThickElement3D3N(IndexType NewId,
         GeometryType::Pointer pGeometry,
-        bool NLGeom)
-    : BaseShellElement(NewId, pGeometry)
-    , mpCoordinateTransformation(NLGeom ?
-                                 new ShellT3_CorotationalCoordinateTransformation(pGeometry) :
-                                 new ShellT3_CoordinateTransformation(pGeometry))
+        PropertiesType::Pointer pProperties)
+    : BaseType(NewId, pGeometry, pProperties)
 {
 }
 
-ShellThickElement3D3N::ShellThickElement3D3N(IndexType NewId,
-        GeometryType::Pointer pGeometry,
-        PropertiesType::Pointer pProperties,
-        bool NLGeom)
-    : BaseShellElement(NewId, pGeometry, pProperties)
-    , mpCoordinateTransformation(NLGeom ?
-                                 new ShellT3_CorotationalCoordinateTransformation(pGeometry) :
-                                 new ShellT3_CoordinateTransformation(pGeometry))
-{
-}
-
-ShellThickElement3D3N::ShellThickElement3D3N(IndexType NewId,
-        GeometryType::Pointer pGeometry,
-        PropertiesType::Pointer pProperties,
-        CoordinateTransformationBasePointerType pCoordinateTransformation)
-    : BaseShellElement(NewId, pGeometry, pProperties)
-    , mpCoordinateTransformation(pCoordinateTransformation)
-{
-}
-
-ShellThickElement3D3N::~ShellThickElement3D3N()
-{
-}
-
-Element::Pointer ShellThickElement3D3N::Create(IndexType NewId,
+template <ShellKinematics TKinematics>
+Element::Pointer ShellThickElement3D3N<TKinematics>::Create(IndexType NewId,
         NodesArrayType const& ThisNodes,
         PropertiesType::Pointer pProperties) const
 {
     GeometryType::Pointer newGeom(GetGeometry().Create(ThisNodes));
-    return Kratos::make_intrusive< ShellThickElement3D3N >(NewId, newGeom,
-            pProperties, mpCoordinateTransformation->Create(newGeom));
+    return Kratos::make_intrusive< ShellThickElement3D3N >(NewId, newGeom, pProperties);
 }
 
-Element::Pointer ShellThickElement3D3N::Create(IndexType NewId,
+template <ShellKinematics TKinematics>
+Element::Pointer ShellThickElement3D3N<TKinematics>::Create(IndexType NewId,
         GeometryType::Pointer pGeom,
         PropertiesType::Pointer pProperties) const
 {
-    return Kratos::make_intrusive< ShellThickElement3D3N >(NewId, pGeom,
-            pProperties, mpCoordinateTransformation->Create(pGeom));
+    return Kratos::make_intrusive< ShellThickElement3D3N >(NewId, pGeom, pProperties);
 }
 
-void ShellThickElement3D3N::Initialize(const ProcessInfo& rCurrentProcessInfo)
-{
-    KRATOS_TRY
-
-    BaseShellElement::Initialize(rCurrentProcessInfo);
-
-    const int points_number = GetGeometry().PointsNumber();
-    KRATOS_ERROR_IF_NOT(points_number == 3) <<"ShellThickElement3D3N - Wrong number of nodes" << points_number << std::endl;
-
-    // Initialization should not be done again in a restart!
-    if (!rCurrentProcessInfo[IS_RESTARTED]) {
-        mpCoordinateTransformation->Initialize();
-        this->SetupOrientationAngles();
-    }
-
-    KRATOS_CATCH("")
-}
-
-void ShellThickElement3D3N::InitializeNonLinearIteration
-(const ProcessInfo& rCurrentProcessInfo)
-{
-    mpCoordinateTransformation->InitializeNonLinearIteration();
-
-    BaseInitializeNonLinearIteration(rCurrentProcessInfo);
-}
-
-void ShellThickElement3D3N::FinalizeNonLinearIteration(const ProcessInfo& rCurrentProcessInfo)
-{
-    mpCoordinateTransformation->FinalizeNonLinearIteration();
-
-    BaseFinalizeNonLinearIteration(rCurrentProcessInfo);
-}
-
-void ShellThickElement3D3N::InitializeSolutionStep(const ProcessInfo& rCurrentProcessInfo)
-{
-    BaseInitializeSolutionStep(rCurrentProcessInfo);
-
-    mpCoordinateTransformation->InitializeSolutionStep();
-}
-
-void ShellThickElement3D3N::FinalizeSolutionStep(const ProcessInfo& rCurrentProcessInfo)
-{
-    BaseFinalizeSolutionStep(rCurrentProcessInfo);
-
-    mpCoordinateTransformation->FinalizeSolutionStep();
-}
-
-void ShellThickElement3D3N::CalculateMassMatrix(MatrixType& rMassMatrix, const ProcessInfo& rCurrentProcessInfo)
-{
-    if ((rMassMatrix.size1() != 18) || (rMassMatrix.size2() != 18)) {
-        rMassMatrix.resize(18, 18, false);
-    }
-    noalias(rMassMatrix) = ZeroMatrix(18, 18);
-
-    // Compute the local coordinate system.
-    ShellT3_LocalCoordinateSystem referenceCoordinateSystem(
-        mpCoordinateTransformation->CreateReferenceCoordinateSystem());
-
-    // Average mass per unit area over the whole element
-    double av_mass_per_unit_area = 0.0;
-
-    const SizeType num_gps = GetNumberOfGPs();
-
-    for (SizeType i = 0; i < num_gps; i++) {
-        av_mass_per_unit_area += mSections[i]->CalculateMassPerUnitArea(GetProperties());
-    }
-    av_mass_per_unit_area /= double(num_gps);
-
-    // Flag for consistent or lumped mass matrix
-    const bool compute_lumped_mass_matrix = StructuralMechanicsElementUtilities::ComputeLumpedMassMatrix(GetProperties(), rCurrentProcessInfo);
-
-    // Consistent mass matrix
-    if (!compute_lumped_mass_matrix) {
-        // General matrix form as per Felippa plane stress CST eqn 31.27:
-        // http://kis.tu.kielce.pl/mo/COLORADO_FEM/colorado/IFEM.Ch31.pdf
-        //
-        // Density and thickness are averaged over element.
-
-        // Average thickness over the whole element
-        double thickness = 0.0;
-        for (SizeType i = 0; i < num_gps; i++) {
-            thickness += mSections[i]->GetThickness(GetProperties());
-        }
-        thickness /= double(num_gps);
-
-        // Populate mass matrix with integation results
-        for (SizeType row = 0; row < 18; row++) {
-            if (row % 6 < 3) {
-                // translational entry
-                for (SizeType col = 0; col < 3; col++) {
-                    rMassMatrix(row, 6 * col + row % 6) = 1.0;
-                }
-            } else {
-                // rotational entry
-                for (SizeType col = 0; col < 3; col++) {
-                    rMassMatrix(row, 6 * col + row % 6) =
-                        thickness*thickness / 12.0;
-                }
-            }
-
-            // Diagonal entry
-            rMassMatrix(row, row) *= 2.0;
-        }
-
-        rMassMatrix *=
-            av_mass_per_unit_area*referenceCoordinateSystem.Area() / 12.0;
-    }// Consistent mass matrix
-    else {
-        // Lumped mass matrix
-
-        // lumped area
-        double lump_area = referenceCoordinateSystem.Area() / 3.0;
-
-        // loop on nodes
-        for (SizeType i = 0; i < 3; i++) {
-            SizeType index = i * 6;
-
-            double nodal_mass = av_mass_per_unit_area * lump_area;
-
-            // translational mass
-            rMassMatrix(index, index) = nodal_mass;
-            rMassMatrix(index + 1, index + 1) = nodal_mass;
-            rMassMatrix(index + 2, index + 2) = nodal_mass;
-
-            // rotational mass - neglected for the moment...
-        }
-    }// Lumped mass matrix
-}
 
 // =====================================================================================
 //
@@ -278,11 +131,12 @@ void ShellThickElement3D3N::CalculateMassMatrix(MatrixType& rMassMatrix, const P
 //
 // =====================================================================================
 
-void ShellThickElement3D3N::CalculateOnIntegrationPoints(const Variable<double>& rVariable,
+template <ShellKinematics TKinematics>
+void ShellThickElement3D3N<TKinematics>::CalculateOnIntegrationPoints(const Variable<double>& rVariable,
         std::vector<double>& rValues,
         const ProcessInfo& rCurrentProcessInfo)
 {
-    const SizeType num_gps = GetNumberOfGPs();
+    const SizeType num_gps = this->GetNumberOfGPs();
     // resize output
     if (rValues.size() != num_gps) {
         rValues.resize(num_gps);
@@ -307,7 +161,7 @@ void ShellThickElement3D3N::CalculateOnIntegrationPoints(const Variable<double>&
 
     if (caseId > 19) { // calculate stresses
         // Initialize common calculation variables
-        CalculationData data(mpCoordinateTransformation, rCurrentProcessInfo);
+        CalculationData data(this->mpCoordinateTransformation, rCurrentProcessInfo);
         data.CalculateLHS = true;
         data.CalculateRHS = true;
         InitializeCalculationData(data);
@@ -315,7 +169,7 @@ void ShellThickElement3D3N::CalculateOnIntegrationPoints(const Variable<double>&
         // Get the current displacements in global coordinate system and
         // transform to reference local system
         ShellT3_LocalCoordinateSystem referenceCoordinateSystem(
-            mpCoordinateTransformation->CreateReferenceCoordinateSystem());
+            this->mpCoordinateTransformation->CreateReferenceCoordinateSystem());
         MatrixType Rdisp(18, 18);
         referenceCoordinateSystem.ComputeTotalRotationMatrix(Rdisp);
         data.localDisplacements = prod(Rdisp, data.globalDisplacements);
@@ -325,7 +179,7 @@ void ShellThickElement3D3N::CalculateOnIntegrationPoints(const Variable<double>&
 
         // Calculate the response of the Cross Section - setup for 1 GP
         data.gpIndex = 0;
-        ShellCrossSection::Pointer& section = mSections[0];
+        ShellCrossSection::Pointer& section = this->mSections[0];
         CalculateSectionResponse(data);
 
 
@@ -368,7 +222,7 @@ void ShellThickElement3D3N::CalculateOnIntegrationPoints(const Variable<double>&
         }
 
         // Initialize common calculation variables
-        CalculationData data(mpCoordinateTransformation, rCurrentProcessInfo);
+        CalculationData data(this->mpCoordinateTransformation, rCurrentProcessInfo);
         data.CalculateLHS = true;
         data.CalculateRHS = true;
         InitializeCalculationData(data);
@@ -377,7 +231,7 @@ void ShellThickElement3D3N::CalculateOnIntegrationPoints(const Variable<double>&
         // Get the current displacements in global coordinate system and
         // transform to reference local system
         ShellT3_LocalCoordinateSystem referenceCoordinateSystem(
-            mpCoordinateTransformation->CreateReferenceCoordinateSystem());
+            this->mpCoordinateTransformation->CreateReferenceCoordinateSystem());
         MatrixType Rdisp(18, 18);
         referenceCoordinateSystem.ComputeTotalRotationMatrix(Rdisp);
         data.localDisplacements = prod(Rdisp, data.globalDisplacements);
@@ -387,7 +241,7 @@ void ShellThickElement3D3N::CalculateOnIntegrationPoints(const Variable<double>&
 
         // Get all laminae strengths
         const PropertiesType& props = GetProperties();
-        ShellCrossSection::Pointer& section = mSections[0];
+        ShellCrossSection::Pointer& section = this->mSections[0];
         std::vector<Matrix> Laminae_Strengths =
             std::vector<Matrix>(section->NumberOfPlies());
         for (unsigned int ply = 0; ply < section->NumberOfPlies(); ply++) {
@@ -440,14 +294,15 @@ void ShellThickElement3D3N::CalculateOnIntegrationPoints(const Variable<double>&
     } // Tsai wu
     else {
         for (SizeType i = 0; i < num_gps; i++) {
-            mSections[i]->GetValue(rVariable, GetProperties(), rValues[i]);
+            this->mSections[i]->GetValue(rVariable, GetProperties(), rValues[i]);
         }
     }
 
     OPT_INTERPOLATE_RESULTS_TO_STANDARD_GAUSS_POINTS(rValues);
 }
 
-void ShellThickElement3D3N::CalculateOnIntegrationPoints(const Variable<Matrix>& rVariable,
+template <ShellKinematics TKinematics>
+void ShellThickElement3D3N<TKinematics>::CalculateOnIntegrationPoints(const Variable<Matrix>& rVariable,
         std::vector<Matrix>& rValues,
         const ProcessInfo& rCurrentProcessInfo)
 {
@@ -456,30 +311,19 @@ void ShellThickElement3D3N::CalculateOnIntegrationPoints(const Variable<Matrix>&
     }
 }
 
-void ShellThickElement3D3N::CalculateOnIntegrationPoints(const Variable<array_1d<double, 3> >& rVariable,
-        std::vector<array_1d<double, 3> >& rOutput,
-        const ProcessInfo& rCurrentProcessInfo)
+template <ShellKinematics TKinematics>
+int ShellThickElement3D3N<TKinematics>::Check(const ProcessInfo& rCurrentProcessInfo) const
 {
-    if (rVariable == LOCAL_AXIS_1 ||
-            rVariable == LOCAL_AXIS_2 ||
-            rVariable == LOCAL_AXIS_3) {
-        BaseShellElement::ComputeLocalAxis(rVariable, rOutput, mpCoordinateTransformation);
-    } else if (rVariable == LOCAL_MATERIAL_AXIS_1 ||
-               rVariable == LOCAL_MATERIAL_AXIS_2 ||
-               rVariable == LOCAL_MATERIAL_AXIS_3) {
-        BaseShellElement::ComputeLocalMaterialAxis(rVariable, rOutput, mpCoordinateTransformation);
-    }
-}
+    KRATOS_TRY;
 
-void ShellThickElement3D3N::Calculate(const Variable<Matrix>& rVariable, Matrix& Output, const ProcessInfo& rCurrentProcessInfo)
-{
-    if (rVariable == LOCAL_ELEMENT_ORIENTATION) {
-        Output.resize(3, 3, false);
+    BaseType::Check(rCurrentProcessInfo);
 
-        // Compute the local coordinate system.
-        ShellT3_LocalCoordinateSystem localCoordinateSystem(mpCoordinateTransformation->CreateReferenceCoordinateSystem());
-        Output = trans(localCoordinateSystem.Orientation());
-    }
+    const int points_number = GetGeometry().PointsNumber();
+    KRATOS_ERROR_IF_NOT(points_number == 3) <<"ShellThickElement3D3N - Wrong number of nodes" << points_number << std::endl;
+
+    return 0;
+
+    KRATOS_CATCH("")
 }
 
 // =====================================================================================
@@ -488,7 +332,8 @@ void ShellThickElement3D3N::Calculate(const Variable<Matrix>& rVariable, Matrix&
 //
 // =====================================================================================
 
-void ShellThickElement3D3N::CalculateStressesFromForceResultants
+template <ShellKinematics TKinematics>
+void ShellThickElement3D3N<TKinematics>::CalculateStressesFromForceResultants
 (VectorType& rstresses, const double& rthickness)
 {
     // Refer http://www.colorado.edu/engineering/CAS/courses.d/AFEM.d/AFEM.Ch20.d/AFEM.Ch20.pdf
@@ -508,9 +353,10 @@ void ShellThickElement3D3N::CalculateStressesFromForceResultants
     rstresses[7] *= 1.5 / rthickness;
 }
 
-void ShellThickElement3D3N::CalculateLaminaStrains(CalculationData& data)
+template <ShellKinematics TKinematics>
+void ShellThickElement3D3N<TKinematics>::CalculateLaminaStrains(CalculationData& data)
 {
-    ShellCrossSection::Pointer& section = mSections[data.gpIndex];
+    ShellCrossSection::Pointer& section = this->mSections[data.gpIndex];
 
     // Get laminate properties
     double thickness = section->GetThickness(GetProperties());
@@ -586,9 +432,10 @@ void ShellThickElement3D3N::CalculateLaminaStrains(CalculationData& data)
     }
 }
 
-void ShellThickElement3D3N::CalculateLaminaStresses(CalculationData& data)
+template <ShellKinematics TKinematics>
+void ShellThickElement3D3N<TKinematics>::CalculateLaminaStresses(CalculationData& data)
 {
-    ShellCrossSection::Pointer& section = mSections[data.gpIndex];
+    ShellCrossSection::Pointer& section = this->mSections[data.gpIndex];
 
     // Setup flag to compute ply constitutive matrices
     // (units [Pa] and rotated to element orientation)
@@ -619,7 +466,8 @@ void ShellThickElement3D3N::CalculateLaminaStresses(CalculationData& data)
     }
 }
 
-double ShellThickElement3D3N::CalculateTsaiWuPlaneStress(const CalculationData& data, const Matrix& rLamina_Strengths, const unsigned int& rPly)
+template <ShellKinematics TKinematics>
+double ShellThickElement3D3N<TKinematics>::CalculateTsaiWuPlaneStress(const CalculationData& data, const Matrix& rLamina_Strengths, const unsigned int& rPly)
 {
     // Incoming lamina strengths are organized as follows:
     // Refer to 'shell_cross_section.cpp' for details.
@@ -690,7 +538,8 @@ double ShellThickElement3D3N::CalculateTsaiWuPlaneStress(const CalculationData& 
     return std::min(tsai_reserve_factor_bottom, tsai_reserve_factor_top);
 }
 
-void ShellThickElement3D3N::CalculateVonMisesStress(const CalculationData& data, const Variable<double>& rVariable, double& rVon_Mises_Result)
+template <ShellKinematics TKinematics>
+void ShellThickElement3D3N<TKinematics>::CalculateVonMisesStress(const CalculationData& data, const Variable<double>& rVariable, double& rVon_Mises_Result)
 {
     // calc von mises stresses at top, mid and bottom surfaces for
     // thick shell
@@ -738,7 +587,8 @@ void ShellThickElement3D3N::CalculateVonMisesStress(const CalculationData& data,
 
 }
 
-void ShellThickElement3D3N::CalculateShellElementEnergy(const CalculationData& data, const Variable<double>& rVariable, double& rEnergy_Result)
+template <ShellKinematics TKinematics>
+void ShellThickElement3D3N<TKinematics>::CalculateShellElementEnergy(const CalculationData& data, const Variable<double>& rVariable, double& rEnergy_Result)
 {
     // Energy calcs - these haven't been verified or tested yet.
 
@@ -785,7 +635,8 @@ void ShellThickElement3D3N::CalculateShellElementEnergy(const CalculationData& d
     }
 }
 
-void ShellThickElement3D3N::CheckGeneralizedStressOrStrainOutput(const Variable<Matrix>& rVariable, int& ijob, bool& bGlobal)
+template <ShellKinematics TKinematics>
+void ShellThickElement3D3N<TKinematics>::CheckGeneralizedStressOrStrainOutput(const Variable<Matrix>& rVariable, int& ijob, bool& bGlobal)
 {
     if (rVariable == SHELL_STRAIN) {
         ijob = 1;
@@ -838,84 +689,15 @@ void ShellThickElement3D3N::CheckGeneralizedStressOrStrainOutput(const Variable<
     }
 }
 
-void ShellThickElement3D3N::DecimalCorrection(Vector& a)
-{
-    double norm = norm_2(a);
-    double tolerance = std::max(norm * 1.0E-12, 1.0E-12);
-    for (SizeType i = 0; i < a.size(); i++)
-        if (std::abs(a(i)) < tolerance) {
-            a(i) = 0.0;
-        }
-}
-
-void ShellThickElement3D3N::SetupOrientationAngles()
-{
-    if (this->Has(MATERIAL_ORIENTATION_ANGLE)) {
-        for (CrossSectionContainerType::iterator it = mSections.begin(); it != mSections.end(); ++it) {
-            (*it)->SetOrientationAngle(this->GetValue(MATERIAL_ORIENTATION_ANGLE));
-        }
-    } else {
-        ShellT3_LocalCoordinateSystem lcs(mpCoordinateTransformation->CreateReferenceCoordinateSystem());
-
-        Vector3Type normal;
-        noalias(normal) = lcs.Vz();
-
-        Vector3Type dZ;
-        dZ(0) = 0.0;
-        dZ(1) = 0.0;
-        dZ(2) = 1.0; // for the moment let's take this. But the user can specify its own triad! TODO
-
-        Vector3Type dirX;
-        MathUtils<double>::CrossProduct(dirX, dZ, normal);
-
-        // try to normalize the x vector. if it is near zero it means that we need
-        // to choose a default one.
-        double dirX_norm = dirX(0)*dirX(0) + dirX(1)*dirX(1) + dirX(2)*dirX(2);
-        if (dirX_norm < 1.0E-12) {
-            dirX(0) = 1.0;
-            dirX(1) = 0.0;
-            dirX(2) = 0.0;
-        } else if (dirX_norm != 1.0) {
-            dirX_norm = std::sqrt(dirX_norm);
-            dirX /= dirX_norm;
-        }
-
-        Vector3Type elem_dirX = lcs.Vx();
-
-        // now calculate the angle between the element x direction and the material x direction.
-        Vector3Type& a = elem_dirX;
-        Vector3Type& b = dirX;
-        double a_dot_b = a(0)*b(0) + a(1)*b(1) + a(2)*b(2);
-        if (a_dot_b < -1.0) {
-            a_dot_b = -1.0;
-        }
-        if (a_dot_b > 1.0) {
-            a_dot_b = 1.0;
-        }
-        double angle = std::acos(a_dot_b);
-
-        // if they are not counter-clock-wise, let's change the sign of the angle
-        if (angle != 0.0) {
-            const MatrixType& R = lcs.Orientation();
-            if (dirX(0)*R(1, 0) + dirX(1)*R(1, 1) + dirX(2)*R(1, 2) < 0.0) {
-                angle = -angle;
-            }
-        }
-
-        for (CrossSectionContainerType::iterator it = mSections.begin(); it != mSections.end(); ++it) {
-            (*it)->SetOrientationAngle(angle);
-        }
-    }
-}
-
-void ShellThickElement3D3N::CalculateSectionResponse(CalculationData& data)
+template <ShellKinematics TKinematics>
+void ShellThickElement3D3N<TKinematics>::CalculateSectionResponse(CalculationData& data)
 {
     const array_1d<double, 3>& loc = data.gpLocations[0];
     data.N(0) = 1.0 - loc[1] - loc[2];
     data.N(1) = loc[1];
     data.N(2) = loc[2];
 
-    ShellCrossSection::Pointer& section = mSections[0];
+    ShellCrossSection::Pointer& section = this->mSections[0];
     data.SectionParameters.SetShapeFunctionsValues(data.N);
     data.SectionParameters.SetMaterialProperties(GetProperties());
 
@@ -929,7 +711,8 @@ void ShellThickElement3D3N::CalculateSectionResponse(CalculationData& data)
     section->CalculateSectionResponse(data.SectionParameters, ConstitutiveLaw::StressMeasure_PK2);
 }
 
-void ShellThickElement3D3N::InitializeCalculationData(CalculationData& data)
+template <ShellKinematics TKinematics>
+void ShellThickElement3D3N<TKinematics>::InitializeCalculationData(CalculationData& data)
 {
     //-------------------------------------
     // Computation of all stuff that remain
@@ -956,10 +739,10 @@ void ShellThickElement3D3N::InitializeCalculationData(CalculationData& data)
     const double A2 = 2.0*A;
 
     double h = 0.0;
-    for (unsigned int i = 0; i < mSections.size(); i++) {
-        h += mSections[i]->GetThickness(GetProperties());
+    for (unsigned int i = 0; i < this->mSections.size(); i++) {
+        h += this->mSections[i]->GetThickness(GetProperties());
     }
-    h /= (double)mSections.size();
+    h /= (double)this->mSections.size();
 
     data.hMean = h;
     data.TotalArea = A;
@@ -970,7 +753,7 @@ void ShellThickElement3D3N::InitializeCalculationData(CalculationData& data)
         data.gpLocations.clear();
     }
 
-    data.gpLocations.resize(GetNumberOfGPs());
+    data.gpLocations.resize(this->GetNumberOfGPs());
 #ifdef OPT_1_POINT_INTEGRATION
     array_1d<double, 3>& gp0 = data.gpLocations[0];
     gp0[0] = 1.0 / 3.0;
@@ -1108,7 +891,7 @@ void ShellThickElement3D3N::InitializeCalculationData(CalculationData& data)
         // Only for testing!
         std::cout << "Using basic CST shear formulation!" << std::endl;
         const Matrix& shapeFunctions =
-            GetGeometry().ShapeFunctionsValues(mIntegrationMethod);
+            GetGeometry().ShapeFunctionsValues(this->mIntegrationMethod);
 
         //node 1
         data.B(6, 2) = y23;
@@ -1176,14 +959,15 @@ void ShellThickElement3D3N::InitializeCalculationData(CalculationData& data)
     // in global and local coordinate systems
 
     data.globalDisplacements.clear();
-    GetValuesVector(data.globalDisplacements);
+    this->GetValuesVector(data.globalDisplacements);
 
     data.localDisplacements =
-        mpCoordinateTransformation->CalculateLocalDisplacements(
+        this->mpCoordinateTransformation->CalculateLocalDisplacements(
             data.LCS, data.globalDisplacements);
 }
 
-void ShellThickElement3D3N::CalculateDSGc3Contribution(CalculationData& data, MatrixType& rLeftHandSideMatrix)
+template <ShellKinematics TKinematics>
+void ShellThickElement3D3N<TKinematics>::CalculateDSGc3Contribution(CalculationData& data, MatrixType& rLeftHandSideMatrix)
 {
     std::cout << "DSGc3" << std::endl;
 
@@ -1414,7 +1198,8 @@ void ShellThickElement3D3N::CalculateDSGc3Contribution(CalculationData& data, Ma
     }
 }
 
-void ShellThickElement3D3N::CalculateSmoothedDSGBMatrix(CalculationData& data)
+template <ShellKinematics TKinematics>
+void ShellThickElement3D3N<TKinematics>::CalculateSmoothedDSGBMatrix(CalculationData& data)
 {
     // Use smoothed DSG formulation according to [Nguyen-Thoi et al., 2013]
     //
@@ -1531,7 +1316,8 @@ void ShellThickElement3D3N::CalculateSmoothedDSGBMatrix(CalculationData& data)
     }
 }
 
-void ShellThickElement3D3N::CalculateDSGShearBMatrix(Matrix& shearBMatrix,const double& a, const double& b, const double& c, const double& d, const double& A)
+template <ShellKinematics TKinematics>
+void ShellThickElement3D3N<TKinematics>::CalculateDSGShearBMatrix(Matrix& shearBMatrix,const double& a, const double& b, const double& c, const double& d, const double& A)
 {
     //node 1
     shearBMatrix(0, 2) = b - c;
@@ -1561,7 +1347,8 @@ void ShellThickElement3D3N::CalculateDSGShearBMatrix(Matrix& shearBMatrix,const 
     shearBMatrix /= (2.0*A);
 }
 
-void ShellThickElement3D3N::AddBodyForces(CalculationData& data, VectorType& rRightHandSideVector)
+template <ShellKinematics TKinematics>
+void ShellThickElement3D3N<TKinematics>::AddBodyForces(CalculationData& data, VectorType& rRightHandSideVector)
 {
     // This is hardcoded to use 1 gauss point, despite the declared def
     // using 3 gps.
@@ -1569,7 +1356,7 @@ void ShellThickElement3D3N::AddBodyForces(CalculationData& data, VectorType& rRi
 
     // Get shape functions
 #ifdef OPT_USES_INTERIOR_GAUSS_POINTS
-    const Matrix& N = GetGeometry().ShapeFunctionsValues(mIntegrationMethod);
+    const Matrix& N = GetGeometry().ShapeFunctionsValues(this->mIntegrationMethod);
 #else
     // Disabled to use 1 gp below
     /*
@@ -1597,7 +1384,7 @@ void ShellThickElement3D3N::AddBodyForces(CalculationData& data, VectorType& rRi
     //for (unsigned int igauss = 0; igauss < mNumGPs; igauss++)
     for (unsigned int igauss = 0; igauss < 1; igauss++) {
         // get mass per unit area
-        double mass_per_unit_area = mSections[igauss]->CalculateMassPerUnitArea(GetProperties());
+        double mass_per_unit_area = this->mSections[igauss]->CalculateMassPerUnitArea(GetProperties());
 
         // interpolate nodal volume accelerations to this gauss point
         // and obtain the body force vector
@@ -1620,7 +1407,8 @@ void ShellThickElement3D3N::AddBodyForces(CalculationData& data, VectorType& rRi
     }
 }
 
-void ShellThickElement3D3N::CalculateAll(MatrixType& rLeftHandSideMatrix,
+template <ShellKinematics TKinematics>
+void ShellThickElement3D3N<TKinematics>::CalculateAll(MatrixType& rLeftHandSideMatrix,
         VectorType& rRightHandSideVector,
         const ProcessInfo& rCurrentProcessInfo,
         const bool CalculateStiffnessMatrixFlag,
@@ -1644,7 +1432,7 @@ void ShellThickElement3D3N::CalculateAll(MatrixType& rLeftHandSideMatrix,
     noalias(rRightHandSideVector) = ZeroVector(18);
 
     // Initialize common calculation variables
-    CalculationData data(mpCoordinateTransformation, rCurrentProcessInfo);
+    CalculationData data(this->mpCoordinateTransformation, rCurrentProcessInfo);
     data.CalculateLHS = CalculateStiffnessMatrixFlag;
     data.CalculateRHS = CalculateResidualVectorFlag;
     InitializeCalculationData(data);
@@ -1678,7 +1466,7 @@ void ShellThickElement3D3N::CalculateAll(MatrixType& rLeftHandSideMatrix,
     // Let the CoordinateTransformation finalize the calculation.
     // This will handle the transformation of the local matrices/vectors to
     // the global coordinate system.
-    mpCoordinateTransformation->FinalizeCalculations(data.LCS,
+    this->mpCoordinateTransformation->FinalizeCalculations(data.LCS,
             data.globalDisplacements,
             data.localDisplacements,
             rLeftHandSideMatrix,
@@ -1691,7 +1479,8 @@ void ShellThickElement3D3N::CalculateAll(MatrixType& rLeftHandSideMatrix,
     KRATOS_CATCH("")
 }
 
-bool ShellThickElement3D3N::TryCalculateOnIntegrationPoints_GeneralizedStrainsOrStresses(const Variable<Matrix>& rVariable,
+template <ShellKinematics TKinematics>
+bool ShellThickElement3D3N<TKinematics>::TryCalculateOnIntegrationPoints_GeneralizedStrainsOrStresses(const Variable<Matrix>& rVariable,
         std::vector<Matrix>& rValues,
         const ProcessInfo& rCurrentProcessInfo)
 {
@@ -1705,7 +1494,7 @@ bool ShellThickElement3D3N::TryCalculateOnIntegrationPoints_GeneralizedStrainsOr
         return false;
     }
 
-    const SizeType num_gps = GetNumberOfGPs();
+    const SizeType num_gps = this->GetNumberOfGPs();
 
     // resize output
     if (rValues.size() != num_gps) {
@@ -1717,7 +1506,7 @@ bool ShellThickElement3D3N::TryCalculateOnIntegrationPoints_GeneralizedStrainsOr
     Matrix aux33(3, 3);
 
     // Initialize common calculation variables
-    CalculationData data(mpCoordinateTransformation, rCurrentProcessInfo);
+    CalculationData data(this->mpCoordinateTransformation, rCurrentProcessInfo);
     if (ijob > 2) {
         data.CalculateLHS = true; // calc constitutive mat for forces/moments
     } else {
@@ -1729,14 +1518,14 @@ bool ShellThickElement3D3N::TryCalculateOnIntegrationPoints_GeneralizedStrainsOr
     // Get the current displacements in global coordinate system and
     // transform to reference local system
     ShellT3_LocalCoordinateSystem referenceCoordinateSystem(
-        mpCoordinateTransformation->CreateReferenceCoordinateSystem());
+        this->mpCoordinateTransformation->CreateReferenceCoordinateSystem());
     MatrixType Rdisp(18, 18);
     referenceCoordinateSystem.ComputeTotalRotationMatrix(Rdisp);
     data.localDisplacements = prod(Rdisp, data.globalDisplacements);
 
     // set the current integration point index
     data.gpIndex = 0;
-    ShellCrossSection::Pointer& section = mSections[0];
+    ShellCrossSection::Pointer& section = this->mSections[0];
 
     // compute strains
     noalias(data.generalizedStrains) = prod(data.B, data.localDisplacements);
@@ -1756,11 +1545,11 @@ bool ShellThickElement3D3N::TryCalculateOnIntegrationPoints_GeneralizedStrainsOr
                                                      section->GetThickness(GetProperties()));
             }
         }
-        DecimalCorrection(data.generalizedStresses);
+        this->DecimalCorrection(data.generalizedStresses);
     }
 
     // adjust output
-    DecimalCorrection(data.generalizedStrains);
+    this->DecimalCorrection(data.generalizedStrains);
 
     // store the results, but first rotate them back to the section
     // coordinate system. we want to visualize the results in that system not
@@ -1963,7 +1752,8 @@ bool ShellThickElement3D3N::TryCalculateOnIntegrationPoints_GeneralizedStrainsOr
     return true;
 }
 
-ShellCrossSection::SectionBehaviorType ShellThickElement3D3N::GetSectionBehavior() const
+template <ShellKinematics TKinematics>
+ShellCrossSection::SectionBehaviorType ShellThickElement3D3N<TKinematics>::GetSectionBehavior() const
 {
     return ShellCrossSection::Thick;
 }
@@ -1974,25 +1764,18 @@ ShellCrossSection::SectionBehaviorType ShellThickElement3D3N::GetSectionBehavior
 //
 // =====================================================================================
 
-void ShellThickElement3D3N::save(Serializer& rSerializer) const
+template <ShellKinematics TKinematics>
+void ShellThickElement3D3N<TKinematics>::save(Serializer& rSerializer) const
 {
-    KRATOS_SERIALIZE_SAVE_BASE_CLASS(rSerializer, BaseShellElement);
-    bool is_corotational = (nullptr != dynamic_cast<ShellT3_CorotationalCoordinateTransformation*>(mpCoordinateTransformation.get()));
-    rSerializer.save("is_corotational", is_corotational);
-    rSerializer.save("CTr", *mpCoordinateTransformation);
+    KRATOS_SERIALIZE_SAVE_BASE_CLASS(rSerializer, BaseType);
 }
 
-void ShellThickElement3D3N::load(Serializer& rSerializer)
+template <ShellKinematics TKinematics>
+void ShellThickElement3D3N<TKinematics>::load(Serializer& rSerializer)
 {
-    KRATOS_SERIALIZE_LOAD_BASE_CLASS(rSerializer, BaseShellElement);
-    bool is_corotational;
-    rSerializer.load("is_corotational", is_corotational);
-    if (is_corotational) {
-        mpCoordinateTransformation = Kratos::make_shared<ShellT3_CorotationalCoordinateTransformation>(pGetGeometry());
-    } else {
-        mpCoordinateTransformation = Kratos::make_shared<ShellT3_CoordinateTransformation>(pGetGeometry());
-    }
-    rSerializer.load("CTr", *mpCoordinateTransformation);
+    KRATOS_SERIALIZE_LOAD_BASE_CLASS(rSerializer, BaseType);
 }
+
+template class ShellThickElement3D3N<ShellKinematics::NONLINEAR_COROTATIONAL>;
 
 } // namespace Kratos

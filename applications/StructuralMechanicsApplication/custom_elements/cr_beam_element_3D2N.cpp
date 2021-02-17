@@ -21,6 +21,7 @@
 #include "includes/global_variables.h"
 #include "structural_mechanics_application_variables.h"
 #include "custom_utilities/structural_mechanics_element_utilities.h"
+#include "utilities/atomic_utilities.h"
 
 namespace Kratos
 {
@@ -1575,8 +1576,7 @@ void CrBeamElement3D2N::AddExplicitContribution(
             array_1d<double, 3>& r_force_residual = GetGeometry()[i].FastGetSolutionStepValue(FORCE_RESIDUAL);
 
             for (IndexType j = 0; j < msDimension; ++j) {
-                #pragma omp atomic
-                r_force_residual[j] += rRHSVector[index + j] - damping_residual_contribution[index + j];
+                AtomicAdd(r_force_residual[j], (rRHSVector[index + j] - damping_residual_contribution[index + j]));
             }
         }
     }
@@ -1590,8 +1590,7 @@ void CrBeamElement3D2N::AddExplicitContribution(
             array_1d<double, 3>& r_moment_residual = GetGeometry()[i].FastGetSolutionStepValue(MOMENT_RESIDUAL);
 
             for (IndexType j = 0; j < msDimension; ++j) {
-                #pragma omp atomic
-                r_moment_residual[j] += rRHSVector[index + j] - damping_residual_contribution[index + j];
+                AtomicAdd(r_moment_residual[j], (rRHSVector[index + j] - damping_residual_contribution[index + j]));
             }
         }
     }
@@ -1614,13 +1613,11 @@ void CrBeamElement3D2N::AddExplicitContribution(
                 }
             }
 
-            #pragma omp atomic
-            GetGeometry()[i].GetValue(NODAL_MASS) += aux_nodal_mass;
+            AtomicAdd(GetGeometry()[i].GetValue(NODAL_MASS), aux_nodal_mass);
 
             array_1d<double, 3>& r_nodal_inertia = GetGeometry()[i].GetValue(NODAL_INERTIA);
             for (IndexType k = 0; k < msDimension; ++k) {
-                #pragma omp atomic
-                r_nodal_inertia[k] += std::abs(aux_nodal_inertia[k]);
+                AtomicAdd(r_nodal_inertia[k], std::abs(aux_nodal_inertia[k]) );
             }
         }
     }
