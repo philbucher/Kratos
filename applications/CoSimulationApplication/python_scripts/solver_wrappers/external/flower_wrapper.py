@@ -17,13 +17,12 @@ class FLOWerWrapper(CoSimulationSolverWrapper):
         super().__init__(settings, model, solver_name)
 
         settings_defaults = KM.Parameters("""{
-            "model_parts_read" : { },
-            "model_parts_send" : { },
-            "model_parts_recv" : { },
-            "export_data"      : [ ],
-            "import_data"      : [ ],
-            "write_received_meshes" : false,
-            "interval"         : [0.0, "End"]
+            "model_parts_read"      : { },
+            "model_parts_send"      : { },
+            "model_parts_recv"      : { },
+            "export_data"           : [ ],
+            "import_data"           : [ ],
+            "write_received_meshes" : false
         }""")
 
         self.settings["solver_wrapper_settings"].ValidateAndAssignDefaults(settings_defaults)
@@ -59,25 +58,21 @@ class FLOWerWrapper(CoSimulationSolverWrapper):
 
 
     def SolveSolutionStep(self):
-        if self.interval_utility.IsInInterval(self.current_time):
+        for data_name in self.settings["solver_wrapper_settings"]["export_data"].GetStringArray():
+            data_config = {
+                "type" : "coupling_interface_data",
+                "interface_data" : self.GetInterfaceData(data_name)
+            }
+            self.ExportData(data_config)
 
-            for data_name in self.settings["solver_wrapper_settings"]["export_data"].GetStringArray():
-                data_config = {
-                    "type" : "coupling_interface_data",
-                    "interface_data" : self.GetInterfaceData(data_name)
-                }
-                self.ExportData(data_config)
+        super().SolveSolutionStep()
 
-            super().SolveSolutionStep()
-
-            for data_name in self.settings["solver_wrapper_settings"]["import_data"].GetStringArray():
-                data_config = {
-                    "type" : "coupling_interface_data",
-                    "interface_data" : self.GetInterfaceData(data_name)
-                }
-                self.ImportData(data_config)
-        else:
-            KM.Logger.PrintInfo("FlowerWrapper", "Data sync not in interval: "+str(self.current_time))
+        for data_name in self.settings["solver_wrapper_settings"]["import_data"].GetStringArray():
+            data_config = {
+                "type" : "coupling_interface_data",
+                "interface_data" : self.GetInterfaceData(data_name)
+            }
+            self.ImportData(data_config)
 
     def AdvanceInTime(self, current_time):
         self.current_time = current_time

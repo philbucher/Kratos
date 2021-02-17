@@ -1005,7 +1005,7 @@ void CrBeamElement3D2N::CalculateMassMatrix(MatrixType& rMassMatrix,
 
     const bool compute_lumped_mass_matrix = StructuralMechanicsElementUtilities::ComputeLumpedMassMatrix(GetProperties(), rCurrentProcessInfo);
 
-    if (compute_lumped_mass_matrix)  {
+    if (compute_lumped_mass_matrix) {
         CalculateLumpedMassMatrix(rMassMatrix, rCurrentProcessInfo);
     } else {
         CalculateConsistentMassMatrix(rMassMatrix, rCurrentProcessInfo);

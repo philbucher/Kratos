@@ -8,6 +8,8 @@ import KratosMultiphysics.TrilinosApplication as TrilinosApplication
 # Import base class file
 from KratosMultiphysics.StructuralMechanicsApplication.trilinos_structural_mechanics_solver import TrilinosMechanicalSolver
 
+from KratosMultiphysics.StructuralMechanicsApplication import auxiliar_methods_solvers
+
 def CreateSolver(model, custom_settings):
     return TrilinosImplicitMechanicalSolver(model, custom_settings)
 
@@ -50,7 +52,7 @@ class TrilinosImplicitMechanicalSolver(TrilinosMechanicalSolver):
 
         scheme_type = self.settings["scheme_type"].GetString()
         if "bdf" in scheme_type or scheme_type == "backward_euler":
-            return max(base_min_buffer_size, self._bdf_integration_order()+1)
+            return max(base_min_buffer_size, auxiliar_methods_solvers.GetBDFIntegrationOrder(scheme_type)+1)
         else:
             return base_min_buffer_size
 
@@ -61,14 +63,14 @@ class TrilinosImplicitMechanicalSolver(TrilinosMechanicalSolver):
         process_info = self.main_model_part.ProcessInfo
         process_info[StructuralMechanicsApplication.RAYLEIGH_ALPHA] = self.settings["rayleigh_alpha"].GetDouble()
         process_info[StructuralMechanicsApplication.RAYLEIGH_BETA] = self.settings["rayleigh_beta"].GetDouble()
-        if (scheme_type == "newmark"):
+        if scheme_type == "newmark":
             damp_factor_m = 0.0
             mechanical_scheme = TrilinosApplication.TrilinosResidualBasedBossakDisplacementScheme(damp_factor_m)
-        elif (scheme_type == "bossak"):
+        elif scheme_type == "bossak":
             damp_factor_m = self.settings["damp_factor_m"].GetDouble()
             mechanical_scheme = TrilinosApplication.TrilinosResidualBasedBossakDisplacementScheme(damp_factor_m)
         elif scheme_type.startswith("bdf") or scheme_type == "backward_euler" :
-            order = self._bdf_integration_order()
+            order = auxiliar_methods_solvers.GetBDFIntegrationOrder(scheme_type)
             # In case of rotation dof we declare the dynamic variables
             if self.settings["rotation_dofs"].GetBool():
                 bdf_parameters = KratosMultiphysics.Parameters(""" {
