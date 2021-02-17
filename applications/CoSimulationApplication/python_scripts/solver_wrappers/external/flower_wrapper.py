@@ -30,8 +30,6 @@ class FLOWerWrapper(CoSimulationSolverWrapper):
         model_part_utilities.CreateMainModelPartsFromCouplingDataSettings(self.settings["data"], self.model, self.name)
         model_part_utilities.AllocateHistoricalVariablesFromCouplingDataSettings(self.settings["data"], self.model, self.name)
 
-        self.interval_utility = KM.IntervalUtility(self.settings["solver_wrapper_settings"])
-
     def Initialize(self):
         super().Initialize()
 
@@ -75,7 +73,6 @@ class FLOWerWrapper(CoSimulationSolverWrapper):
             self.ImportData(data_config)
 
     def AdvanceInTime(self, current_time):
-        self.current_time = current_time
         return 0.0 # TODO find a better solution here... maybe get time from solver through IO
 
     def _GetIOType(self):

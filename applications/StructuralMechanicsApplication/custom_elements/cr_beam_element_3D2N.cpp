@@ -1015,7 +1015,6 @@ void CrBeamElement3D2N::CalculateMassMatrix(MatrixType& rMassMatrix,
             prod(rotation_matrix, rMassMatrix);
         rMassMatrix = prod(aux_matrix, Matrix(trans(rotation_matrix)));
     }
-
     KRATOS_CATCH("")
 }
 
