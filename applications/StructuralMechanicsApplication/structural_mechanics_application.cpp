@@ -552,10 +552,10 @@ void KratosStructuralMechanicsApplication::Register() {
 
     //Register the shells elements
     KRATOS_REGISTER_ELEMENT("IsotropicShellElement3D3N", mIsotropicShellElement3D3N)
-    // KRATOS_REGISTER_ELEMENT("ShellThickElement3D4N", mShellThickElement3D4N)
+    KRATOS_REGISTER_ELEMENT("ShellThickElement3D4N", mShellThickElement3D4N)
     KRATOS_REGISTER_ELEMENT("ShellThickElementCorotational3D4N", mShellThickCorotationalElement3D4N)
     KRATOS_REGISTER_ELEMENT("ShellThinElementCorotational3D4N", mShellThinCorotationalElement3D4N)
-    // KRATOS_REGISTER_ELEMENT("ShellThinElement3D3N", mShellThinElement3D3N)
+    KRATOS_REGISTER_ELEMENT("ShellThinElement3D3N", mShellThinElement3D3N)
     KRATOS_REGISTER_ELEMENT("ShellThickElementCorotational3D3N", mShellThickCorotationalElement3D3N)
     KRATOS_REGISTER_ELEMENT("ShellThinElementCorotational3D3N", mShellThinCorotationalElement3D3N)
 

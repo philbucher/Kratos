@@ -13,7 +13,6 @@
 #include "shell_thick_element_3D3N.hpp"
 
 #include "custom_utilities/shell_utilities.h"
-#include "custom_utilities/structural_mechanics_element_utilities.h"
 
 #include <string>
 #include <iomanip>

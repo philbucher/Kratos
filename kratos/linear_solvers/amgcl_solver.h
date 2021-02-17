@@ -36,8 +36,6 @@
 #include "linear_solvers/iterative_solver.h"
 #include "includes/ublas_interface.h"
 #include "spaces/ublas_space.h"
-#include "utilities/builtin_timer.h"
-
 
 #include <amgcl/coarsening/rigid_body_modes.hpp>
 
@@ -395,13 +393,9 @@ public:
                 //output of coordinates
                 std::ofstream coordsfile;
                 coordsfile.open ("coordinates.txt");
-                BuiltinTimer system_construction_time;
-
                 for(unsigned int i=0; i<mCoordinates.size(); i++) {
                     coordsfile << mCoordinates[i][0] << " " << mCoordinates[i][1] << " " << mCoordinates[i][2] << "\n";
                 }
-
-                std::cout << "Writing Coordinates took: " << system_construction_time.ElapsedSeconds() << std::endl;
                 coordsfile.close();
             }
 
@@ -428,8 +422,6 @@ public:
         } //please do not remove this parenthesis!
 
         if(mFallbackToGMRES && resid > mTolerance ) {
-            KRATOS_INFO_IF("AMGCL Linear Solver", mVerbosity > 0) << "Falling back to GMRES" << std::endl;
-
             mAMGCLParameters.put("solver.type", "gmres");
             mAMGCLParameters.put("solver.M",  mGMRESSize);
             AMGCLSolve(1, rA,rX,rB, iters, resid, mAMGCLParameters, mVerbosity, mUseGPGPU);
