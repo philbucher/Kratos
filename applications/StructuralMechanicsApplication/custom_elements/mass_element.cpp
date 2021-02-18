@@ -264,7 +264,7 @@ double MassElement::GetElementMass() const
         total_mass = GetProperties()[CROSS_AREA] * StructuralMechanicsElementUtilities::CalculateReferenceLength3D2N(*this);
 
     } else if (local_dim == 2) { // tri / quad
-        total_mass = GetProperties()[THICKNESS]* r_geom.Area(); // TODO Area is calculated o the current configuration, fix this!
+        total_mass = GetProperties()[THICKNESS]* r_geom.Area();
 
     } else {
         KRATOS_ERROR << "Wrong local space dimension!" << std::endl;
